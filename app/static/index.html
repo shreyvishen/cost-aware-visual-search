@@ -18,10 +18,9 @@
   </header>
 
   <p class="tagline">
-    I fine-tuned Qwen3.5-4B to use a zoom-in tool, so it decides <b>where to look</b> in a
-    high-resolution image instead of reading all of it. The reward grades it on
-    <b>correctness and latency</b> — real milliseconds I measured on the machine it ships to.
-    Two runs, identical except that one term.
+    Qwen3.5-4B fine-tuned to use a zoom-in tool — it decides <b>where to look</b> in a
+    high-resolution image. Reward grades <b>correctness and latency</b>, in real milliseconds
+    measured on the machine it ships to.
   </p>
 
   <div class="hero" id="hero"></div>
@@ -36,7 +35,6 @@
   <div class="page on" id="p-results">
   <section>
     <h2><span class='sn'>1</span>The reward</h2>
-    <p class="sub">The whole project lives in one line.</p>
     <div class="formula">
       <code>reward = correct ? (1 &minus; &lambda; &middot; cost_ms) : 0</code>
       <code class="dim">cost_ms = 1.411&middot;vision_tokens + 13.198&middot;decode_tokens + 101.79&middot;zooms</code>
@@ -51,15 +49,12 @@
         <p>The same, minus what the episode actually cost in milliseconds. I fitted those three
         coefficients on an M4 Max rather than guessing them.</p></div>
     </div>
-    <div class="note">
-      Notice the cost sits inside the <code>correct</code> branch. Answer wrong and you get 0 no
-      matter how fast you were, so the model can never buy speed by being wrong.
-    </div>
+    <div class="note">Cost sits inside the <code>correct</code> branch — wrong answers score 0
+      regardless of speed, so it can never buy speed by being wrong.</div>
   </section>
 
   <section>
     <h2><span class='sn'>2</span>Results</h2>
-    <p class="sub">Same code, same data, same seed, same budget. Only &lambda; changes.</p>
     <div class="scroll"><table id="t-headline"></table></div>
     <dl class="key">
       <dt>accuracy</dt><dd>share of the 191 V*Bench questions answered correctly, on the training rig</dd>
@@ -103,7 +98,6 @@
   <div class="page" id="p-examples">
   <section>
     <h2><span class='sn'>7</span>Examples</h2>
-    <p class="sub">All 191 questions, grouped by who got them right.</p>
     <div class="cells" id="cells"></div>
     <div id="samples"></div>
     <div class="note" id="n-matrix"></div>
@@ -114,8 +108,6 @@
   <div class="page" id="p-demo">
   <section>
     <h2><span class='sn'>8</span>Run it yourself</h2>
-    <p class="sub">Drag in an image and ask about something small in it. Turn down-projection
-      off to send the full-resolution image in one shot instead.</p>
     <div class="demo">
       <div id="chat" class="chat" data-drop="1"></div>
       <div class="composer">

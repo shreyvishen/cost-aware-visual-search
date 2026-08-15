@@ -101,10 +101,9 @@ function headline() {
       `<div class="savekey"><span><i style="background:#2f5cff"></i>thinking ${Math.round(pc(dDec))}%</span>` +
       `<span><i style="background:#93a8ff"></i>looking ${Math.round(pc(dVis))}%</span>` +
       `<span><i style="background:#d6ddff"></i>tool calls ${Math.round(pc(dTool))}%</span></div>` +
-      `<div class="savenote">The saving came from the model <b>thinking less</b>, not looking ` +
-      `less. A decode token costs <span class="num">${D.coeffs.b.toFixed(1)} ms</span> and a ` +
-      `vision token <span class="num">${D.coeffs.a.toFixed(2)} ms</span> — the milliseconds were ` +
-      `never in the looking. Count tool calls instead and you teach it the opposite.</div>`;
+      `<div class="savenote">The saving is <b>thinking less</b>, not looking less — decode costs ` +
+      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span>/token vs ` +
+      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> for vision.</div>`;
   }
 }
 
@@ -248,8 +247,7 @@ function charts() {
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
   $("#n-train").innerHTML =
-    `The cost-aware reward sits lower because it is paying the cost term. Read the behaviour ` +
-    `curves underneath it, not the height.`;
+    `Cost-aware sits lower because it pays the cost term — read the behaviour curves, not the height.`;
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
@@ -276,11 +274,7 @@ function matrix() {
   });
   showSamples("only_a");
   const m = D.matrix;
-  $("#n-matrix").innerHTML =
-    `The two policies disagree on <span class="num">${m.only_a + m.only_b}</span> of 191 questions, ` +
-    `almost evenly split — <span class="num">${m.only_a}</span> to A, ` +
-    `<span class="num">${m.only_b}</span> to cost-aware. About as even as it gets — equally ` +
-    `accurate, just wrong about different pictures.`;
+  $("#n-matrix").innerHTML = "";
 }
 
 function boxOverlay(sid, boxes, color) {
