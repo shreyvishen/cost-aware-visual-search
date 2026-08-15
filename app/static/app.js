@@ -101,9 +101,9 @@ function headline() {
       `<div class="savekey"><span><i style="background:#2f5cff"></i>thinking ${Math.round(pc(dDec))}%</span>` +
       `<span><i style="background:#93a8ff"></i>looking ${Math.round(pc(dVis))}%</span>` +
       `<span><i style="background:#d6ddff"></i>tool calls ${Math.round(pc(dTool))}%</span></div>` +
-      `<div class="savenote">The saving is <b>thinking less</b>, not looking less — decode costs ` +
-      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span>/token vs ` +
-      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> for vision.</div>`;
+      `<div class="savenote"><span class="num">${D.coeffs.a.toFixed(2)} ms</span> per prefill ` +
+      `token &nbsp;·&nbsp; <span class="num">${D.coeffs.b.toFixed(1)} ms</span> per decode token ` +
+      `&nbsp;·&nbsp; <span class="num">${(D.coeffs.b / D.coeffs.a).toFixed(1)}×</span></div>`;
   }
 }
 
