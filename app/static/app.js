@@ -246,8 +246,7 @@ function charts() {
 
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
-  $("#n-train").innerHTML =
-    `Cost-aware sits lower because it pays the cost term — read the behaviour curves, not the height.`;
+  $("#n-train").innerHTML = "";
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
