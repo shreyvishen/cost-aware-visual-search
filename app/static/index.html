@@ -20,30 +20,23 @@
   <p class="tagline">
     A 4B vision model decides <b>where to look</b> in a high-resolution image. The reward charges
     <b>milliseconds measured on the machine it ships to</b>, not a token count. Same accuracy,
-    <b id="tag-speed">2.2&times;</b> faster on device.
+    <b id="tag-speed">2.18&times;</b> faster on device.
   </p>
 
-  <!-- how to read the numbers -->
-  <section>
-    <div class="eyebrow">How to read these numbers</div>
-    <div class="note" style="margin-top:0">
-      <b>Accuracy is measured on the training rig</b> — 3&times;RTX&nbsp;3090, bf16, all
-      <span class="num">191</span> V*Bench images. GPU time is cheap there, so everything runs.
-      <br>
-      <b>Prefill, decode, latency and cost are measured on the M4 Max</b> at Q4_K_M, on
-      <span class="num">36</span> images. Fewer, because each episode must run <b>serially</b> —
-      two timing jobs on one Metal GPU corrupt each other — and because the Mac is the deployment
-      target, which is the only place a latency number means anything.
-      Two machines, two sample sizes, and each number is quoted from the machine where it is real.
-    </div>
-  </section>
+  <div class="hero" id="hero"></div>
 
-  <!-- headline -->
+  <nav class="tabs" id="tabs">
+    <button data-p="results" class="on">Results</button>
+    <button data-p="training">Training</button>
+    <button data-p="examples">Examples</button>
+    <button data-p="demo">Try it</button>
+  </nav>
+
+  <div class="page on" id="p-results">
   <section>
-    <h2>Base vs. A vs. B</h2>
+    <h2>Run A vs. Run B</h2>
     <p class="sub">
-      A and B are the same code, data, seed and training budget. The only difference is one term
-      in the reward. Base is the untrained model in the same zoom environment.
+      Identical code, data, seed and budget. One term in the reward differs.
     </p>
     <div class="scroll"><table id="t-headline"></table></div>
     <div class="note" id="n-headline"></div>
@@ -53,16 +46,23 @@
   <section>
     <h2>What looking buys</h2>
     <p class="sub">
-      The same policy on the same <span class="num">96</span> reference images, once allowed to
-      zoom and once forbidden. These 96 are all direct-attribute questions, a harder slice than
-      the full 191 — so compare the two rows to each other, never to the 191-image number.
+      Same policy, same <span class="num">96</span> images, zoom allowed vs. forbidden.
     </p>
     <div class="scroll"><table id="t-zoom"></table></div>
   </section>
 
-  <!-- training -->
   <section>
-    <h2>Training</h2>
+    <h2>Across quantizations</h2>
+    <p class="sub">
+      Precision changes how much the model says, not just how fast it runs.
+    </p>
+    <div class="scroll"><table id="t-quant"></table></div>
+  </section>
+  </div>
+
+  <div class="page" id="p-training">
+  <section>
+    <h2>Training — reward and cost curves</h2>
     <p class="sub">
       <span class="num" id="hp-line"></span>
     </p>
@@ -76,72 +76,56 @@
     <div class="scroll"><table id="t-hyper"></table></div>
   </section>
 
-  <!-- disagreement -->
+  </div>
+
+  <div class="page" id="p-examples">
   <section>
     <h2>Where they disagree</h2>
     <p class="sub">
-      Every one of the <span class="num">191</span> questions, sorted by who got it right.
-      Click a cell for worked examples.
+      All <span class="num">191</span> questions by who got it right.
     </p>
     <div class="cells" id="cells"></div>
     <div id="samples"></div>
     <div class="note" id="n-matrix"></div>
   </section>
 
-  <!-- quantization -->
-  <section>
-    <h2>Across quantizations</h2>
-    <p class="sub">
-      All measured on the M4. Quantization changes more than speed — it changes how much the
-      model says, and therefore what it costs.
-    </p>
-    <div class="scroll"><table id="t-quant"></table></div>
-  </section>
+  </div>
 
-  <!-- demo -->
+  <div class="page" id="p-demo">
   <section>
     <h2>Try it</h2>
     <p class="sub">
-      Upload an image, ask a question, and watch where the policy looks. Turning
-      down-projection off shows the model the full-resolution image once, with no zoom tool —
-      the expensive way.
+      Watch where the policy looks. Turn down-projection off to send the full image instead.
     </p>
     <div class="demo">
-      <div class="row">
-        <div>
-          <label class="f" for="f-img">Image</label>
-          <input type="file" id="f-img" accept="image/*">
-        </div>
-        <div style="flex:1 1 240px">
-          <label class="f" for="f-q">Question</label>
-          <input type="text" id="f-q" placeholder="What colour is the flag?">
-        </div>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <div>
-          <label class="f" for="f-model">Model</label>
-          <select id="f-model">
-            <option value="base">Base</option>
-            <option value="a">Run A — no cost term</option>
-            <option value="b" selected>Run B — measured ms</option>
-          </select>
-        </div>
-        <div>
-          <label class="f" for="f-quant">Quantization</label>
-          <select id="f-quant">
-            <option value="q4" selected>Q4_K_M</option>
-            <option value="q8">Q8_0</option>
-            <option value="bf16">BF16</option>
-          </select>
-        </div>
-        <label class="toggle" style="padding-bottom:9px">
-          <input type="checkbox" id="f-down" checked> down-project + zoom
+      <div id="chat" class="chat"></div>
+      <div class="composer">
+        <label class="attach" for="f-img">
+          <input type="file" id="f-img" accept="image/*" hidden>
+          <span id="f-preview"></span>
+          <span class="plus">+</span>
         </label>
-        <button class="go" id="f-go">Run</button>
+        <div class="cgrow">
+          <input type="text" id="f-q" placeholder="Ask about something small in the image…">
+          <div class="crow">
+            <span id="f-name" class="fname num"></span>
+            <select id="f-model" title="model">
+              <option value="a">Run A — no cost term</option>
+              <option value="b" selected>Run B — measured ms</option>
+            </select>
+            <select id="f-quant" title="quantization">
+              <option value="q4" selected>Q4_K_M</option>
+              <option value="q8">Q8_0</option>
+              <option value="bf16">BF16</option>
+            </select>
+            <label class="toggle"><input type="checkbox" id="f-down" checked> down-project + zoom</label>
+            <button class="go" id="f-go">Run</button>
+          </div>
+        </div>
       </div>
-      <div class="out" id="out"></div>
     </div>
   </section>
+  </div>
 
   <footer>
     Qwen3.5-4B, LoRA rank 16, GRPO. Cost model fitted on an M4 Max

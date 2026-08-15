@@ -48,6 +48,7 @@ import importlib.util
 import io
 import json
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -92,12 +93,11 @@ MODELS = {
 QUANTS = ("q4", "q8", "bf16")
 
 #: Hard cap on ONE generation, measured from the moment the server is healthy. Loading
-#: a model is not inside this budget (bf16 alone takes ~40 s) — that is what warmup()
-#: is for. On expiry the server is killed, which unblocks the in-flight HTTP call, and
-#: the partial numbers collected so far are returned with `error` set.
+#: a model is NOT inside this budget (bf16 alone takes ~40 s) — that is what warmup() is
+#: for, and the load has its own 300 s ceiling inside `measure.wait_healthy`. On expiry
+#: the server is killed, which unblocks the in-flight HTTP call, and the partial numbers
+#: collected so far are returned with `error` set.
 REQUEST_TIMEOUT_S = float(os.environ.get("DEMO_REQUEST_TIMEOUT_S", "120"))
-#: Separate budget for model load.
-LOAD_TIMEOUT_S = float(os.environ.get("DEMO_LOAD_TIMEOUT_S", "300"))
 
 MAX_ZOOMS = M4.DEFAULT_GEOM["max_zooms"]            # 3
 MAX_NEW_TOKENS = M4.DEFAULT_GEOM["max_new_tokens"]  # 200
@@ -164,16 +164,62 @@ def _server_alive() -> bool:
     return _SERVER is not None and _SERVER["proc"].poll() is None
 
 
+#: Seconds to let llama-server exit on SIGTERM before SIGKILL.
+#: `measure.stop_server` allows 30, which is right for a measurement script and wrong
+#: here: this build does not act on SIGTERM promptly, so a timed-out request sat for
+#: 37 s on a 2 s budget waiting for a process that was never going to leave. A demo
+#: pays 3 s and moves on; nothing is being written that a hard kill could corrupt.
+_STOP_GRACE_S = 3.0
+
+
 def _stop_locked() -> None:
     global _SERVER
     if _SERVER is None:
         return
-    _log(f"stopping server {_SERVER['key']} (pid {_SERVER['proc'].pid})")
-    try:
-        M.stop_server(_SERVER["proc"], _SERVER["log"])
-    except Exception as exc:                                  # never raise on teardown
-        _log(f"stop_server complained: {exc}")
+    proc, log = _SERVER["proc"], _SERVER["log"]
+    _log(f"stopping server {_SERVER['key']} (pid {proc.pid})")
     _SERVER = None
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        if proc.poll() is not None:
+            break
+        try:
+            os.killpg(os.getpgid(proc.pid), sig)
+        except Exception:
+            break
+        try:
+            proc.wait(timeout=_STOP_GRACE_S)
+        except Exception:
+            pass
+    try:
+        log.close()
+    except Exception:
+        pass
+
+
+def _free_port() -> None:
+    """Kill whatever holds OUR port — never any other port.
+
+    `measure.start_server` raises from inside `wait_healthy` if the process dies, and it
+    has already spawned it by then, so a failed start leaks a process nobody holds a
+    handle to. Clearing the port on the way in makes the next call self-healing, and it
+    also clears a demo server left behind by a crashed web server. PORT is not 8211, so
+    this can never touch the benchmark queue.
+    """
+    try:
+        out = subprocess.run(["lsof", "-ti", f"tcp:{PORT}"], capture_output=True,
+                             text=True, timeout=10).stdout.split()
+    except Exception:
+        return
+    for pid in out:
+        if not pid.isdigit():
+            continue
+        _log(f"port {PORT} is held by pid {pid}; killing it")
+        for sig in ("-TERM", "-KILL"):
+            try:
+                subprocess.run(["kill", sig, pid], capture_output=True, timeout=10)
+                time.sleep(1.5)
+            except Exception:
+                pass
 
 
 def _ensure_server(model: str, quant: str) -> int:
@@ -184,6 +230,7 @@ def _ensure_server(model: str, quant: str) -> int:
         return _SERVER["port"]
     if _SERVER is not None:
         _stop_locked()
+    _free_port()
 
     other = bench_queue_busy()
     if other:
@@ -266,12 +313,23 @@ def _png_b64(img: Image.Image, max_side: int | None = None) -> str:
 
 
 def _think_of(text: str) -> str:
-    """The turn's reasoning. Falls back to whatever preceded the first tag."""
+    """The turn's reasoning, for the page to show.
+
+    OFTEN EMPTY, AND THAT IS CORRECT. The measured pipeline sets
+    `chat_template_kwargs.enable_thinking = false` (see m4_verify.chat), and on this
+    build Qwen answers that by emitting a hollow `<think>\\n\\n</think>` and going
+    straight to the tool call or the answer. Turning thinking on would change decode
+    tokens and therefore every millisecond on the page, so the empty string stands.
+    The page must not assume this field has content.
+    """
     got = parse.extract_think(text)
     if got:
         return got
-    head = text.split("<tool_call>")[0].split("<answer>")[0]
-    return head.replace("</think>", "").replace("<|im_end|>", "").strip()
+    head = text.split("</think>", 1)[0] if "</think>" in text else \
+        text.split("<tool_call>")[0].split("<answer>")[0]
+    for tag in ("<think>", "<|im_end|>"):
+        head = head.replace(tag, "")
+    return head.strip()
 
 
 def _new_state(model: str, quant: str, downproject: bool) -> dict:
@@ -495,7 +553,9 @@ def run_episode(image_path: str, question: str, model: str = "base",
             state["error"] = f"timed out after {REQUEST_TIMEOUT_S:.0f}s"
             _log(state["error"] + " — killing the server to unblock")
             _stop_locked()
-            done.wait(20)
+            # The worker's HTTP call fails as soon as the server is gone, and it touches
+            # nothing after that, so a straggler cannot corrupt what we return.
+            done.wait(10)
         elif "exc" in crashed:
             exc = crashed["exc"]
             state["error"] = f"{type(exc).__name__}: {exc}"

@@ -13,6 +13,18 @@ let D = null;
 
 /* ---------- tables ---------------------------------------------------- */
 
+/* `best` on a cell bolds it. Comparisons are only meaningful within a column, so the
+   caller decides which direction wins — lower latency, higher accuracy. */
+function markBest(rows, col, dir) {
+  let bi = -1, bv = null;
+  rows.forEach((r, i) => {
+    const v = r.cells[col] && r.cells[col].raw;
+    if (typeof v !== "number") return;
+    if (bv === null || (dir === "lo" ? v < bv : v > bv)) { bv = v; bi = i; }
+  });
+  if (bi >= 0) rows[bi].cells[col].best = true;
+}
+
 function table(node, cols, rows) {
   node.innerHTML = "";
   const thead = el("thead");
@@ -23,7 +35,8 @@ function table(node, cols, rows) {
   rows.forEach((r) => {
     const t = el("tr", r.hi ? "hi" : null);
     r.cells.forEach((c, i) => {
-      const td = el("td", i === 0 ? "lab" : (c.cls || "num"), c.v == null ? c : c.v);
+      const cls = (i === 0 ? "lab" : (c.cls || "num")) + (c.best ? " best" : "");
+      const td = el("td", cls, c.v == null ? c : c.v);
       tb.appendChild ? t.appendChild(td) : null;
     });
     tb.appendChild(t);
@@ -33,8 +46,14 @@ function table(node, cols, rows) {
 
 function headline() {
   const h = D.headline, by = Object.fromEntries(h.map((x) => [x.key, x]));
-  const cols = ["", "accuracy", "zooms", "prefill tok", "decode tok", "latency", "$ / 1k"];
-  const accOf = (k) => k === "base" ? null : D.accuracy[k]?.full;
+  // Column headers carry their own provenance. Accuracy comes off the rig, everything else
+  // off the Mac — putting them in one table without saying so is how a reader concludes that
+  // B does 1.54 zooms on device when it actually does 0.42.
+  const cols = ["", "accuracy<br><span class='src'>rig · 191</span>",
+    "zooms<br><span class='src'>M4 · 36</span>", "prefill tok<br><span class='src'>M4 · 36</span>",
+    "decode tok<br><span class='src'>M4 · 36</span>", "latency<br><span class='src'>M4 · 36</span>",
+    "$ / 1k<br><span class='src'>M4 · 36</span>"];
+  const accOf = (k) => D.accuracy[k]?.full;
   const rows = h.map((m) => ({
     hi: m.key === "b",
     cells: [
@@ -47,25 +66,66 @@ function headline() {
       usd(m.usd_per_1k),
     ].map((v) => ({ v })),
   }));
+  // raw values so the winner in each column can be found, then bolded
+  h.forEach((m, i) => {
+    const raw = [null, accOf(m.key), m.zooms, m.prefill_tokens, m.decode_tokens,
+                 m.latency_ms, m.usd_per_1k];
+    raw.forEach((v, j) => { if (rows[i].cells[j]) rows[i].cells[j].raw = v; });
+  });
+  markBest(rows, 1, "hi");   // accuracy
+  [2, 3, 4, 5, 6].forEach((c) => markBest(rows, c, "lo"));  // everything else: less is better
   table($("#t-headline"), cols, rows);
 
   const a = by.a, b = by.b;
   if (a && b) {
     const sp = (a.latency_ms / b.latency_ms).toFixed(2);
     $("#tag-speed").textContent = sp + "×";
+    const cut = (x, y) => Math.round((1 - y / x) * 100);
+    const dDec = (a.decode_tokens - b.decode_tokens) * D.coeffs.b;
+    const dVis = (a.prefill_tokens - b.prefill_tokens) * D.coeffs.a;
+    const dTool = (a.zooms - b.zooms) * D.coeffs.c;
+    const tot = Math.max(dDec + dVis + dTool, 1);
+    const pc = (v) => Math.max(0, (v / tot) * 100);
     $("#n-headline").innerHTML =
-      `<b>B matches A's accuracy</b> — 0.482 vs 0.476 on 191 images, McNemar exact ` +
-      `<span class="num">p = 1.000</span> on the 61 questions where they disagree (split 30/31). ` +
-      `<b>And it is ${sp}× faster</b> on the M4, cutting cost per question by ` +
-      `<span class="num">${Math.round((1 - b.usd_per_1k / a.usd_per_1k) * 100)}%</span>. ` +
-      `Note where the saving comes from: decode tokens fall ` +
-      `<span class="num">${Math.round((1 - b.decode_tokens / a.decode_tokens) * 100)}%</span> ` +
-      `while zooms fall only ${Math.round((1 - b.zooms / a.zooms) * 100)}%. The reward charges ` +
-      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span> per decode token against ` +
-      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> per vision token, so the cheapest ` +
-      `milliseconds to give back are tokens of thought — not looks. A reward that counted tool ` +
-      `calls would have pushed the opposite way.`;
+      `<div class="saveline"><b>Same accuracy</b> · McNemar exact <span class="num">p = 1.000</span>` +
+      ` &nbsp;·&nbsp; <b>${(a.latency_ms / b.latency_ms).toFixed(2)}× faster</b>` +
+      ` &nbsp;·&nbsp; <b>${cut(a.usd_per_1k, b.usd_per_1k)}% cheaper</b></div>` +
+      `<div class="savebar" title="where the saving comes from">` +
+      `<span style="width:${pc(dDec)}%;background:#2f5cff"></span>` +
+      `<span style="width:${pc(dVis)}%;background:#93a8ff"></span>` +
+      `<span style="width:${pc(dTool)}%;background:#d6ddff"></span></div>` +
+      `<div class="savekey"><span><i style="background:#2f5cff"></i>thinking ${Math.round(pc(dDec))}%</span>` +
+      `<span><i style="background:#93a8ff"></i>looking ${Math.round(pc(dVis))}%</span>` +
+      `<span><i style="background:#d6ddff"></i>tool calls ${Math.round(pc(dTool))}%</span></div>` +
+      `<div class="savenote">It learned to think less, not look less — a decode token costs ` +
+      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span> against ` +
+      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> for a vision token.</div>`;
   }
+}
+
+function hero() {
+  const by = Object.fromEntries(D.headline.map((x) => [x.key, x]));
+  const a = by.a, b = by.b;
+  if (!a || !b) return;
+  const items = [
+    [`${(a.latency_ms / b.latency_ms).toFixed(2)}×`, "faster on device", true],
+    [`${Math.round((1 - b.usd_per_1k / a.usd_per_1k) * 100)}%`, "cheaper per question", true],
+    [`p = ${(D.sig?.a_vs_b?.p ?? 1).toFixed(3)}`, "accuracy unchanged", false],
+  ];
+  $("#hero").innerHTML = items.map(([v, l, good]) =>
+    `<div class="hstat${good ? " good" : ""}"><b>${v}</b><span>${l}</span></div>`).join("");
+}
+
+function tabs() {
+  const nav = $("#tabs");
+  nav.querySelectorAll("button").forEach((btn) => {
+    btn.onclick = () => {
+      nav.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
+      document.querySelectorAll(".page").forEach((p) =>
+        p.classList.toggle("on", p.id === "p-" + btn.dataset.p));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+  });
 }
 
 function zoomTable() {
@@ -83,6 +143,12 @@ function zoomTable() {
       ].map((v) => ({ v })),
     });
   }
+  rows.forEach((r, i) => {
+    const k = ["a", "b"][i], x = D.accuracy[k];
+    r.cells[1].raw = x.ref_nozoom; r.cells[2].raw = x.ref_zoom;
+    r.cells[3].raw = x.ref_zoom - x.ref_nozoom;
+  });
+  [2, 3].forEach((c) => markBest(rows, c, "hi"));
   table($("#t-zoom"), ["", "zoom disabled", "zoom allowed", "gain", "relative"], rows);
 }
 
@@ -147,7 +213,7 @@ const CA = "#a1a1ac", CB = "#2f5cff";
 function charts() {
   const box = $("#charts"); box.innerHTML = "";
   const pick = (k, f) => (D.curves[k] || []).map((r) => [r.step, f(r)]);
-  box.appendChild(line("Mean reward", "reward = correct ? 1 − λ·cost_ms : 0", [
+  box.appendChild(line("Mean reward", "reward = correct ? 1 − λ·cost_ms : 0 — this is the RL objective", [
     { name: "A", color: CA, pts: pick("a", (r) => r.reward) },
     { name: "B", color: CB, pts: pick("b", (r) => r.reward) },
   ], (v) => v.toFixed(2)));
@@ -159,25 +225,20 @@ function charts() {
     { name: "A", color: CA, pts: pick("a", (r) => r.decode) },
     { name: "B", color: CB, pts: pick("b", (r) => r.decode) },
   ], (v) => Math.round(v)));
-  box.appendChild(line("Groups that taught something", "of 6 per step — zero-variance groups teach nothing", [
-    { name: "A", color: CA, pts: pick("a", (r) => r.groups_used) },
-    { name: "B", color: CB, pts: pick("b", (r) => r.groups_used) },
-  ], (v) => v.toFixed(0)));
+  box.appendChild(line("cost_ms — the term inside the reward",
+    "a·vision + b·decode + c·zooms, both runs priced on the frozen Q4 table", [
+    { name: "A", color: CA, pts: pick("a", (r) => r.cost_q4) },
+    { name: "B", color: CB, pts: pick("b", (r) => r.cost_q4) },
+  ], (v) => Math.round(v)));
 
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
   $("#n-train").innerHTML =
-    `B's reward sits below A's on purpose — it is paying the cost term, so the two curves are ` +
-    `not on the same scale and should not be compared by height. What matters is what each ` +
-    `curve does to behaviour underneath it.<br><br>` +
-    `<b>Why B extracts more from the same data.</b> GRPO scores 8 rollouts against each other; ` +
-    `a group where all 8 score the same has zero variance and teaches nothing. A binary ` +
-    `correct/wrong reward ties constantly — A used ` +
-    `<span class="num">${ga}/${gat}</span> groups, B used <span class="num">${gb}/${gbt}</span>. ` +
-    `The cost term separates rollouts that are <i>equally correct</i>.<br><br>` +
-    `<b>And that is exactly why accuracy did not move.</b> The cost signal is orthogonal to ` +
-    `correctness: it can only reorder rollouts that already agree on being right, so the extra ` +
-    `gradient buys cheapness and cannot buy accuracy. Matched accuracy is structural, not luck.`;
+    `B's reward sits lower because it is paying the cost term — compare behaviour, not height.` +
+    `<br>A binary reward ties often, and a tied group of 8 teaches nothing. The cost term breaks ` +
+    `those ties, so B learned from <span class="num">${Math.round(gb / gbt * 100)}%</span> of its ` +
+    `groups against A's <span class="num">${Math.round(ga / gat * 100)}%</span> — and because cost ` +
+    `only separates rollouts that are <i>already correct</i>, it cannot trade accuracy for speed.`;
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
@@ -211,34 +272,74 @@ function matrix() {
     `policies are equally accurate, they are simply wrong about different pictures.`;
 }
 
+function boxOverlay(sid, boxes, color) {
+  // Boxes are on a 0-1000 grid over the whole image, so percentages map directly.
+  const marks = (boxes || []).map((b, i) => {
+    const [x1, y1, x2, y2] = b;
+    const st = `left:${x1 / 10}%;top:${y1 / 10}%;width:${(x2 - x1) / 10}%;height:${(y2 - y1) / 10}%;` +
+      `border-color:${color}`;
+    return `<span class="bx" style="${st}"><i style="background:${color}">${i + 1}</i></span>`;
+  }).join("");
+  return `<div class="shotwrap"><img src="/img/${sid}" alt="" loading="lazy">${marks}</div>`;
+}
+
+function traceHtml(t) {
+  if (!t || !t.length) return `<p class="tmeta">No turns recorded.</p>`;
+  return t.map((turn, i) => {
+    let h = `<div class="turn"><div class="tno">turn ${i + 1}</div>`;
+    if (turn.think) h += `<div class="tblk"><span class="tk">thinking</span><p>${esc(turn.think)}</p></div>`;
+    if (turn.tool) {
+      const a = turn.tool.arguments || {};
+      h += `<div class="tblk"><span class="tk">tool call</span><pre class="num">image_zoom_in_tool(
+  bbox_2d = [${(a.bbox_2d || []).join(", ")}]${a.label ? `,\n  label = ${JSON.stringify(a.label)}` : ""}
+)</pre></div>`;
+    }
+    if (turn.crop_vision_tokens) h += `<div class="tblk"><span class="tk">crop returned</span><p class="num">${turn.crop_vision_tokens} vision tokens</p></div>`;
+    if (turn.answer) h += `<div class="tblk"><span class="tk">answer</span><p><b>${esc(turn.answer)}</b></p></div>`;
+    return h + `</div>`;
+  }).join("");
+}
+
+const esc = (s) => (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
 function showSamples(k) {
   const box = $("#samples"); box.innerHTML = "";
   const list = D.samples[k] || [];
   if (!list.length) { box.appendChild(el("p", "sub", "No examples in this cell.")); return; }
-  list.forEach((s) => {
+  list.forEach((s, si) => {
     const d = el("div", "sample");
-    d.appendChild(el("div", "q", s.question));
-    d.appendChild(el("div", "gold", "Gold: " + s.gold));
-    const a = el("div", "ans");
-    [["A", s.a], ["B", s.b]].forEach(([who, r]) => {
-      const side = el("div", "side");
-      side.innerHTML =
-        `<div class="who">Run ${who}</div>` +
-        `<div class="val">${r.answer ?? "<i>no answer</i>"} ` +
-        `<span class="pill ${r.correct ? "good" : "bad"}"><span class="dot"></span>` +
-        `${r.correct ? "correct" : "wrong"}</span></div>` +
-        `<div class="meta num">${r.zooms} zoom${r.zooms === 1 ? "" : "s"} · ${r.decode} decode tokens</div>`;
-      a.appendChild(side);
-    });
-    d.appendChild(a);
+    d.innerHTML = `<div class="q">${esc(s.question)}</div>
+      <div class="gold">Gold: ${esc(s.gold)}</div>
+      <div class="pair">
+        ${["a", "b"].map((who) => {
+          const r = s[who], color = who === "a" ? "#a1a1ac" : "#2f5cff";
+          return `<div class="col">
+            <div class="who">Run ${who.toUpperCase()}
+              <span class="pill ${r.correct ? "good" : "bad"}"><span class="dot"></span>${r.correct ? "correct" : "wrong"}</span>
+            </div>
+            ${boxOverlay(s.sid, r.boxes, color)}
+            <div class="val">${esc(r.answer) || "<i>no answer</i>"}</div>
+            <div class="meta num">${r.zooms} zoom${r.zooms === 1 ? "" : "s"} · ${r.decode} decode tok</div>
+            <button class="tbtn" data-k="${k}" data-i="${si}" data-w="${who}">show trace</button>
+            <div class="trace" hidden>${traceHtml(r.trace)}</div>
+          </div>`;
+        }).join("")}
+      </div>`;
     box.appendChild(d);
+  });
+  box.querySelectorAll(".tbtn").forEach((b) => {
+    b.onclick = () => {
+      const t = b.nextElementSibling;
+      t.hidden = !t.hidden;
+      b.textContent = t.hidden ? "show trace" : "hide trace";
+    };
   });
 }
 
 /* ---------- quantization ------------------------------------------------ */
 
 function quant() {
-  const order = { base: 0, a: 1, b: 2 };
+  const order = { a: 0, b: 1 };
   const rows = [...D.quant].sort((x, y) => (x.quant.localeCompare(y.quant)) || order[x.model] - order[y.model])
     .map((q) => ({
       hi: q.model === "b",
@@ -248,59 +349,155 @@ function quant() {
         n1(q.decode_tokens), n2(q.zooms), ms(q.latency_ms) + " ms", usd(q.usd_per_1k),
       ].map((v) => ({ v })),
     }));
+  rows.forEach((r, i) => {
+    const q = [...D.quant].sort((x, y) => (x.quant.localeCompare(y.quant)) || order[x.model] - order[y.model])[i];
+    [null, q.prefill_tokens, q.decode_tokens, q.zooms, q.latency_ms, q.usd_per_1k]
+      .forEach((v, j) => { if (r.cells[j]) r.cells[j].raw = v; });
+  });
+  for (let i = 0; i + 1 < rows.length; i += 2) {
+    const pair = rows.slice(i, i + 2);
+    [1, 2, 3, 4, 5].forEach((c) => markBest(pair, c, "lo"));
+  }
   table($("#t-quant"), ["", "prefill tok", "decode tok", "zooms", "latency", "$ / 1k"], rows);
 }
 
-/* ---------- live demo --------------------------------------------------- */
+/* ---------- live demo: a chat pane that shows the episode happening ------ */
 
-function demo() {
-  const go = $("#f-go"), out = $("#out");
-  go.onclick = async () => {
-    const f = $("#f-img").files[0];
-    const q = $("#f-q").value.trim();
-    if (!f || !q) { out.className = "out on"; out.innerHTML = `<p class="sub">Pick an image and type a question.</p>`; return; }
-    go.disabled = true; go.textContent = "Running…";
-    out.className = "out on";
-    out.innerHTML = `<p class="sub">Loading the model and running the episode. First run on a
-      quantization takes ~30 s while the weights load.</p>`;
-    const fd = new FormData();
-    fd.append("image", f); fd.append("question", q);
-    fd.append("model", $("#f-model").value);
-    fd.append("quant", $("#f-quant").value);
-    fd.append("downproject", $("#f-down").checked ? "1" : "0");
-    try {
-      const r = await fetch("/api/infer", { method: "POST", body: fd });
-      renderRun(await r.json());
-    } catch (e) {
-      out.innerHTML = `<p class="sub">Request failed: ${e}</p>`;
-    }
-    go.disabled = false; go.textContent = "Run";
-  };
+/* The model emits a literal <think>…</think> / <tool_call>…</tool_call> / <answer>…</answer>
+   contract. Showing the raw tags is noise; hiding them entirely would hide the format the
+   whole harness is built around. So: drop the empty scaffolding, keep the content, and mark
+   the answer. */
+function renderStream(t) {
+  let out = esc(t);
+  out = out.replace(/&lt;think&gt;\s*/g, "").replace(/\s*&lt;\/think&gt;/g, "");
+  out = out.replace(/&lt;tool_call&gt;([\s\S]*?)(&lt;\/tool_call&gt;|$)/g,
+    (_, body) => `<span class="tool-lit">${body.trim()}</span>`);
+  out = out.replace(/&lt;answer&gt;([\s\S]*?)(&lt;\/answer&gt;|$)/g,
+    (_, body) => `<span class="ans-lit">${body.trim()}</span>`);
+  return out.replace(/^\s+/, "");
 }
 
-function renderRun(r) {
-  const out = $("#out");
-  if (r.error) { out.innerHTML = `<p class="sub">${r.error}</p>`; return; }
-  const stat = (label, v) => `<div><b>${v}</b>${label}</div>`;
-  let html = `<div class="q" style="font-size:14px;font-weight:500">${r.answer ?? "<i>no answer</i>"}</div>`;
-  html += `<div class="stat">
-      ${stat("prefill tok", Math.round(r.prefill_tokens).toLocaleString())}
-      ${stat("decode tok", Math.round(r.decode_tokens))}
-      ${stat("prefill", ms(r.prefill_ms) + " ms")}
-      ${stat("decode", ms(r.decode_ms) + " ms")}
-      ${stat("total", ms(r.total_ms) + " ms")}
-      ${stat("zooms", r.zooms)}
-      ${stat("cost / 1k", "$" + (r.usd * 1000).toFixed(3))}
-    </div>`;
-  const shots = [];
-  if (r.thumb_png_b64) shots.push(`<figure><img src="data:image/png;base64,${r.thumb_png_b64}">
-    <figcaption>${r.downproject ? "what it saw first (down-projected)" : "full resolution, no zoom"}</figcaption></figure>`);
-  (r.turns || []).forEach((t, i) => {
-    if (t.crop_png_b64) shots.push(`<figure><img src="data:image/png;base64,${t.crop_png_b64}">
-      <figcaption>zoom ${i + 1} — [${(t.bbox_2d || []).join(", ")}]</figcaption></figure>`);
-  });
-  if (shots.length) html += `<div class="shot">${shots.join("")}</div>`;
-  out.innerHTML = html;
+function chatEl(cls, html) { const n = el("div", cls, html); $("#chat").appendChild(n); n.scrollIntoView({ block: "nearest" }); return n; }
+
+function demo() {
+  const file = $("#f-img"), go = $("#f-go");
+  file.onchange = () => {
+    const f = file.files[0];
+    $("#f-name").textContent = f ? f.name : "";
+    $("#f-preview").innerHTML = f ? `<img src="${URL.createObjectURL(f)}" alt="">` : "";
+  };
+  go.onclick = run;
+  $("#f-q").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
+}
+
+async function run() {
+  const f = $("#f-img").files[0], q = $("#f-q").value.trim();
+  const chat = $("#chat"), go = $("#f-go");
+  if (!f || !q) { chat.innerHTML = ""; chatEl("sys", "Attach an image and ask a question."); return; }
+  chat.innerHTML = ""; go.disabled = true; go.textContent = "Running";
+
+  const model = $("#f-model").value, quant = $("#f-quant").value, down = $("#f-down").checked;
+  chatEl("msg user", `<img class="att" src="${URL.createObjectURL(f)}" alt="">
+    <div class="txt">${esc(q)}</div>
+    <div class="tags"><span class="pill">Run ${model.toUpperCase()}</span>
+      <span class="pill">${quant}</span>
+      <span class="pill">${down ? "down-project + zoom" : "full resolution"}</span></div>`);
+
+  const fd = new FormData();
+  fd.append("image", f); fd.append("question", q);
+  fd.append("model", model); fd.append("quant", quant);
+  fd.append("downproject", down ? "1" : "0");
+
+  let statusNode = chatEl("sys", `<span class="spin"></span> loading ${quant.toUpperCase()} weights…`);
+  let turnNode = null, shown = null, tokBuf = "";
+
+  try {
+    const res = await fetch("/api/stream", { method: "POST", body: fd });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+      for (const ln of lines) {
+        if (!ln.trim()) continue;
+        let ev; try { ev = JSON.parse(ln); } catch { continue; }
+        handle(ev);
+      }
+    }
+  } catch (e) {
+    chatEl("sys err", "Stream failed: " + e);
+  }
+  go.disabled = false; go.textContent = "Run";
+
+  function handle(ev) {
+    switch (ev.type) {
+      case "status":
+        if (ev.stage === "ready") {
+          statusNode.className = "sys";
+          statusNode.innerHTML = ev.load_ms
+            ? `model ready <span class="num">${(ev.load_ms / 1000).toFixed(1)}s</span> to load`
+            : `model already warm`;
+        }
+        break;
+      case "image":
+        shown = chatEl("msg bot",
+          `<div class="lbl">${down ? "what it sees — down-projected" : "what it sees — full resolution"}
+             <span class="num">${ev.w}×${ev.h}</span>
+             <span class="num dim">from ${ev.orig_w}×${ev.orig_h}</span></div>
+           <div class="shotwrap live"><img src="data:image/png;base64,${ev.png_b64}" alt=""></div>`);
+        break;
+      case "turn_start":
+        tokBuf = "";
+        turnNode = chatEl("msg bot", `<div class="lbl">turn ${ev.index + 1}</div><div class="stream"></div>`);
+        break;
+      case "token":
+        tokBuf += ev.text;
+        if (turnNode) turnNode.querySelector(".stream").innerHTML = renderStream(tokBuf);
+        break;
+      case "prefill":
+        if (turnNode) turnNode.insertAdjacentHTML("beforeend",
+          `<div class="tick num">prefill ${ev.tokens} tok · ${Math.round(ev.ms)} ms · ${ev.tok_per_s} tok/s</div>`);
+        break;
+      case "decode":
+        if (turnNode) turnNode.insertAdjacentHTML("beforeend",
+          `<div class="tick num">decode ${ev.tokens} tok · ${Math.round(ev.ms)} ms · ${ev.tok_per_s} tok/s</div>`);
+        break;
+      case "turn_end":
+        if (ev.kind === "tool_call" && ev.bbox_2d) {
+          chatEl("msg tool", `<div class="lbl">calling <b>image_zoom_in_tool</b></div>
+            <pre class="num">bbox_2d = [${ev.bbox_2d.join(", ")}]</pre>`);
+          if (shown) {
+            const w = shown.querySelector(".shotwrap");
+            const [x1, y1, x2, y2] = ev.bbox_2d;
+            w.insertAdjacentHTML("beforeend",
+              `<span class="bx draw" style="left:${x1 / 10}%;top:${y1 / 10}%;width:${(x2 - x1) / 10}%;height:${(y2 - y1) / 10}%"></span>`);
+          }
+        }
+        break;
+      case "crop":
+        chatEl("msg tool", ev.png_b64
+          ? `<div class="lbl">crop returned <span class="num">${ev.vision_tokens} vision tokens</span></div>
+             <div class="shotwrap live"><img src="data:image/png;base64,${ev.png_b64}" alt=""></div>`
+          : `<div class="lbl err">${ev.note || "the crop failed"}</div>`);
+        break;
+      case "done": {
+        const s = (l, v) => `<div><b>${v}</b>${l}</div>`;
+        chatEl("msg answer", `<div class="lbl">answer</div><div class="big">${esc(ev.answer) || "<i>no answer</i>"}</div>
+          <div class="stat">
+            ${s("prefill tok", ev.prefill_tokens)}${s("decode tok", ev.decode_tokens)}
+            ${s("zooms", ev.zooms)}${s("total", Math.round(ev.total_ms) + " ms")}
+            ${s("decode", (ev.decode_tok_per_s ?? "—") + " tok/s")}
+            ${s("$ / 1k", "$" + (ev.usd * 1000).toFixed(3))}</div>`);
+        break;
+      }
+      case "error":
+        chatEl("sys err", ev.msg);
+        break;
+    }
+  }
 }
 
 /* ---------- boot -------------------------------------------------------- */
@@ -309,5 +506,5 @@ fetch("/data.json").then((r) => r.json()).then((d) => {
   D = d;
   $("#f-coeffs").textContent =
     `a=${d.coeffs.a.toFixed(2)} b=${d.coeffs.b.toFixed(1)} c=${d.coeffs.c.toFixed(0)} ms, R²=${d.coeffs.r2.toFixed(4)}`;
-  headline(); zoomTable(); hyper(); charts(); matrix(); quant(); demo();
+  hero(); tabs(); headline(); zoomTable(); hyper(); charts(); matrix(); quant(); demo();
 });

@@ -34,8 +34,7 @@ def main() -> None:
         return [r for r in m4 if r.get("tag") == t and r.get("quant") == q]
 
     # ---- headline: base vs A vs B on the same 36 images, M4 @ Q4 ----------------
-    models = [("base", "Base", "base_q4"), ("a", "Run A", "run_a_final"),
-              ("b", "Run B", "run_b_final")]
+    models = [("a", "Run A", "run_a_final"), ("b", "Run B", "run_b_final")]
     headline = []
     for key, label, t in models:
         d = tag(t)
@@ -82,20 +81,40 @@ def main() -> None:
              "only_a" if a["correct"] else
              "only_b" if b["correct"] else "both_wrong")
         cells[k].append(s)
+    def trace(rec):
+        """Turn the raw assistant text of each turn into a readable trace:
+        what it thought, what it asked the tool for, what it finally answered."""
+        out = []
+        for t in rec.get("turns", []):
+            txt = t.get("text", "")
+            think = txt.split("</think>")[0].strip() if "</think>" in txt else ""
+            tool = None
+            if "<tool_call>" in txt:
+                raw = txt.split("<tool_call>", 1)[1].split("</tool_call>")[0].strip()
+                try:
+                    tool = json.loads(raw)
+                except json.JSONDecodeError:
+                    tool = {"raw": raw[:300]}
+            ans = None
+            if "<answer>" in txt:
+                ans = txt.split("<answer>", 1)[1].split("</answer>")[0].strip()
+            out.append({"think": think, "tool": tool, "answer": ans,
+                        "bbox_2d": t.get("bbox_2d"),
+                        "crop_vision_tokens": t.get("crop_vision_tokens", 0)})
+        return out
+
+    def side(rec):
+        return {"answer": rec["answer"], "correct": rec["correct"],
+                "zooms": rec["n_tool_calls"], "decode": rec["decode_tokens"],
+                "vision": rec.get("vision_tokens"),
+                "boxes": rec.get("boxes", []), "trace": trace(rec)}
+
     samples = {}
     for k, ids in cells.items():
         picked = []
         for s in ids[:2]:
-            a, b = fa[s], fb[s]
-            picked.append({
-                "sid": s, "question": a["question"], "gold": a["gold"],
-                "a": {"answer": a["answer"], "correct": a["correct"],
-                      "zooms": a["n_tool_calls"], "decode": a["decode_tokens"],
-                      "boxes": a.get("boxes", [])},
-                "b": {"answer": b["answer"], "correct": b["correct"],
-                      "zooms": b["n_tool_calls"], "decode": b["decode_tokens"],
-                      "boxes": b.get("boxes", [])},
-            })
+            picked.append({"sid": s, "question": fa[s]["question"], "gold": fa[s]["gold"],
+                           "a": side(fa[s]), "b": side(fb[s])})
         samples[k] = picked
     matrix = {k: len(v) for k, v in cells.items()}
 
@@ -103,8 +122,16 @@ def main() -> None:
     curves = {}
     for key, run in (("a", "run_a"), ("b", "run_b")):
         rows = [r for r in jl(ARC / run / "metrics.jsonl") if r.get("phase") == "train"]
+        # Price EVERY step with the same Q4 table, so A and B's cost curves are comparable.
+        # A logs cost_ms = 0 by construction, which would otherwise draw a flat line at zero.
+        cq = json.loads((REPO / "cost_model" / "coeffs_q4.json").read_text())
+        def q4(r):
+            return (cq["a_ms_per_vision_token"] * r["mean_vision_tokens"]
+                    + cq["b_ms_per_decode_token"] * r["mean_decode_tokens"]
+                    + cq["c_ms_per_tool_call"] * r["mean_zooms"])
         curves[key] = [{
             "step": r["step"], "reward": round(r["mean_reward"], 4),
+            "cost_q4": round(q4(r)),
             "reward_std": round(r.get("reward_std", 0), 4),
             "accuracy": round(r["accuracy"], 4),
             "zooms": round(r["mean_zooms"], 3),
@@ -147,10 +174,35 @@ def main() -> None:
                 "usd_per_1k": round(cost_usd(pf, dc) * 1000, 4),
             })
 
+    # ---- pairwise significance, so nobody quotes a difference that is noise ------
+    import sys as _sys
+    _sys.path.insert(0, str(REPO / "scripts"))
+    from compare_runs import mcnemar_exact, wilson  # noqa: E402
+
+    def P(run):
+        return {r["sid"]: r for r in
+                jl(ARC / run / "eval" / "vstar_predictions_final.jsonl")}
+
+    preds = {k: P(v) for k, v in (("a", "run_a"), ("b", "run_b"))}
+    sig = {}
+    for x, y in (("a", "b"),):
+        px, py = preds[x], preds[y]
+        both = sorted(set(px) & set(py))
+        if not both:
+            continue
+        n01 = sum(1 for s in both if not px[s]["correct"] and py[s]["correct"])
+        n10 = sum(1 for s in both if px[s]["correct"] and not py[s]["correct"])
+        sig[f"{x}_vs_{y}"] = {"n": len(both), "fixed_by_y": n01, "fixed_by_x": n10,
+                              "p": round(mcnemar_exact(n01, n10), 4)}
+    for k, d in preds.items():
+        if d:
+            lo, hi = wilson(sum(v["correct"] for v in d.values()), len(d))
+            acc.setdefault(k, {})["ci"] = [round(lo, 4), round(hi, 4)]
+
     coeffs = json.loads((REPO / "cost_model" / "coeffs_q4.json").read_text())
     data = {
         "headline": headline, "accuracy": acc, "matrix": matrix, "samples": samples,
-        "curves": curves, "hyper": hyper, "quant": quant,
+        "curves": curves, "hyper": hyper, "quant": quant, "sig": sig,
         "pricing": {"in_per_m": PRICE_IN, "out_per_m": PRICE_OUT},
         "coeffs": {"a": coeffs["a_ms_per_vision_token"], "b": coeffs["b_ms_per_decode_token"],
                    "c": coeffs["c_ms_per_tool_call"], "r2": coeffs["r2"]},

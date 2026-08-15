@@ -1,0 +1,32 @@
+
+=== 2026-08-15T15:47:16.071737+00:00 /Users/shreyvishen/code/forks/llama.cpp/build/bin/llama-server -m /Users/shreyvishen/assets/models/qwen3.5-4b-gguf/Qwen3.5-4B-BF16.gguf --mmproj /Users/shreyvishen/assets/models/qwen3.5-4b-gguf/mmproj-F16.gguf -ngl 99 --host 127.0.0.1 --port 8231 -c 32768 -np 1 --no-webui --jinja --reasoning-format none --lora /Users/shreyvishen/assets/models/qwen3.5-4b-gguf/lora/run_b.gguf
+0.00.030.315 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.030.370 I srv          init: The UI is disabled
+0.00.030.371 I srv          init: Use --ui/--no-ui (or deprecated --webui/--no-webui) to enable/disable
+0.00.030.429 W srv  llama_server: -----------------
+0.00.030.430 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.030.430 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.030.430 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.030.430 W srv  llama_server: -----------------
+0.00.031.758 I srv    load_model: loading model '/Users/shreyvishen/assets/models/qwen3.5-4b-gguf/Qwen3.5-4B-BF16.gguf'
+0.02.045.134 I cmn          init: llama threadpool init, n_threads = 10
+0.02.100.547 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks
+0.02.100.553 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024
+0.02.100.553 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842
+
+0.02.256.289 I srv    load_model: loaded multimodal model, '/Users/shreyvishen/assets/models/qwen3.5-4b-gguf/mmproj-F16.gguf'
+0.02.298.583 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.02.302.252 I srv  llama_server: model loaded
+0.02.302.255 I srv  llama_server: listening on http://127.0.0.1:8231
+0.03.056.905 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = -1
+0.03.056.953 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.03.473.391 W find_slot: non-consecutive token position 316 after 315 for sequence 0 with 96 new tokens
+0.03.473.424 W find_slot: non-consecutive token position 316 after 315 for sequence 0 with 96 new tokens
+0.03.476.547 W find_slot: non-consecutive token position 515 after 316 for sequence 0 with 188 new tokens
+0.03.476.611 W find_slot: non-consecutive token position 515 after 316 for sequence 0 with 188 new tokens
+0.05.880.634 I slot print_timing: id  0 | task 0 | prompt eval time =     764.28 ms /   604 tokens (    1.27 ms per token,   790.28 tokens per second)
+0.05.880.637 I slot print_timing: id  0 | task 0 |        eval time =    2059.39 ms /    64 tokens (   32.69 ms per token,    30.59 tokens per second)
+0.05.880.637 I slot print_timing: id  0 | task 0 |       total time =    2823.67 ms /   668 tokens
+0.05.880.637 I slot print_timing: id  0 | task 0 |    graphs reused =         63
+0.05.880.718 I slot      release: id  0 | task 0 | stop processing: n_tokens = 667, truncated = 0
+0.05.881.176 I srv    operator(): operator(): cleaning up before exit...
