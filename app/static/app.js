@@ -91,7 +91,8 @@ function headline() {
     const tot = Math.max(dDec + dVis + dTool, 1);
     const pc = (v) => Math.max(0, (v / tot) * 100);
     $("#n-headline").innerHTML =
-      `<div class="saveline"><b>Same accuracy</b>` +
+      `<div class="saveline"><b>${(D.accuracy.b.full / D.accuracy.a.full * 100).toFixed(1)}% ` +
+      `accuracy retained</b>` +
       ` &nbsp;·&nbsp; <b>${(a.latency_ms / b.latency_ms).toFixed(2)}× faster</b>` +
       ` &nbsp;·&nbsp; <b>${cut(a.usd_per_1k, b.usd_per_1k)}% cheaper</b></div>` +
       `<div class="savebar" title="where the saving comes from">` +
@@ -112,7 +113,7 @@ function hero() {
   const a = by.a, b = by.b;
   if (!a || !b) return;
   const items = [
-    ["same", "accuracy", false],
+    [`${(D.accuracy.b.full / D.accuracy.a.full * 100).toFixed(1)}%`, "accuracy retained", false],
     [`${(a.latency_ms / b.latency_ms).toFixed(2)}×`, "faster end to end", true],
     [`${Math.round((1 - b.usd_per_1k / a.usd_per_1k) * 100)}%`, "cheaper per question", true],
   ];
