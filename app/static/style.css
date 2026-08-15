@@ -238,5 +238,5 @@ button.go:disabled { background:var(--ink-4); cursor:default; }
 a { color:var(--accent); text-decoration:none; }
 a:hover { text-decoration:underline; }
 
-.chat.dragging { background:#f6f8ff; outline:1.5px dashed var(--accent); outline-offset:-8px; }
-.chat.dragging::after { content:"Drop the image here"; color:var(--accent); }
+.demo.dragging { outline:2px dashed var(--accent); outline-offset:-4px; background:#f8faff; }
+.demo.dragging .chat:empty::after { content:"Drop the image here"; color:var(--accent); }

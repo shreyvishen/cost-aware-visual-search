@@ -364,25 +364,52 @@ function demo() {
   };
   go.onclick = run;
 
-  // drag an image anywhere onto the chat pane
-  const drop = $("#chat");
+  // Drop anywhere on the demo card, not just the chat pane: a narrow target means most
+  // drops land on the page instead and the browser navigates away to the image.
+  const card = document.querySelector(".demo");
   const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
-  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => {
-    stop(e); drop.classList.add("dragging");
-  }));
-  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => {
-    stop(e); if (ev === "dragleave" && drop.contains(e.relatedTarget)) return;
-    drop.classList.remove("dragging");
-  }));
-  drop.addEventListener("drop", (e) => {
-    const f = [...(e.dataTransfer?.files || [])].find((x) => x.type.startsWith("image/"));
+
+  // Without this the browser opens any image dropped outside the card.
+  ["dragover", "drop"].forEach((ev) =>
+    window.addEventListener(ev, (e) => { if (!card.contains(e.target)) e.preventDefault(); }));
+
+  let depth = 0;
+  card.addEventListener("dragenter", (e) => { stop(e); depth++; card.classList.add("dragging"); });
+  card.addEventListener("dragover", (e) => {
+    stop(e);
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    card.classList.add("dragging");
+  });
+  card.addEventListener("dragleave", (e) => {
+    stop(e); if (--depth <= 0) { depth = 0; card.classList.remove("dragging"); }
+  });
+  card.addEventListener("drop", (e) => {
+    stop(e); depth = 0; card.classList.remove("dragging");
+    const dtf = e.dataTransfer;
+    let f = [...(dtf?.files || [])].find((x) => x.type.startsWith("image/"));
+    if (!f && dtf?.items) {
+      for (const it of dtf.items) {
+        if (it.kind === "file") { const g = it.getAsFile(); if (g && g.type.startsWith("image/")) { f = g; break; } }
+      }
+    }
     if (!f) return;
     const dt = new DataTransfer();
     dt.items.add(f);
     file.files = dt.files;
-    file.dispatchEvent(new Event("change"));
+    file.dispatchEvent(new Event("change", { bubbles: true }));
     $("#f-q").focus();
   });
+
+  // paste an image straight in as well
+  window.addEventListener("paste", (e) => {
+    const f = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith("image/"));
+    if (!f) return;
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    file.files = dt.files;
+    file.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
   $("#f-q").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
 }
 
