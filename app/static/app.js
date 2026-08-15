@@ -243,10 +243,6 @@ function charts() {
     { name: "no cost", color: CA, pts: pick("a", (r) => r.cost_q4) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.cost_q4) },
   ], (v) => Math.round(v)));
-
-  const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
-  const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
-  $("#n-train").innerHTML = "";
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
