@@ -110,7 +110,6 @@ function hero() {
   const items = [
     [`${(a.latency_ms / b.latency_ms).toFixed(2)}×`, "faster on device", true],
     [`${Math.round((1 - b.usd_per_1k / a.usd_per_1k) * 100)}%`, "cheaper per question", true],
-    [`p = ${(D.sig?.a_vs_b?.p ?? 1).toFixed(3)}`, "accuracy unchanged", false],
   ];
   $("#hero").innerHTML = items.map(([v, l, good]) =>
     `<div class="hstat${good ? " good" : ""}"><b>${v}</b><span>${l}</span></div>`).join("");
