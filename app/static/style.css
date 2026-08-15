@@ -334,3 +334,7 @@ td.best { font-weight:600; color:var(--ink); }
 .msg.answer { border-top:0; background:var(--surface); border:1px solid var(--line);
   border-radius:12px; padding:13px 15px; }
 .chat .sys { padding-left:2px; }
+
+/* tighter: heading sits close to its content when there is no subtitle */
+h2 + .chips, h2 + .scroll, h2 + .charts, h2 + .cells { margin-top: 14px; }
+.chips { margin-bottom: 16px; }
