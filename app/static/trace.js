@@ -23,7 +23,7 @@ function boxOverlay(sid, boxes, color) {
   return `<div class="shotwrap"><img src="/img/${esc(sid)}" alt="">${marks}</div>`;
 }
 
-function turnsHtml(trace) {
+function turnsHtml(trace, correct) {
   if (!trace || !trace.length) return `<p class="tmeta">No turns recorded.</p>`;
   return trace.map((turn, i) => {
     let h = `<div class="turn"><div class="tno">turn <span class="n">${i + 1}</span></div>`;
@@ -42,7 +42,8 @@ function turnsHtml(trace) {
         `<p class="cost">the crop cost <b>${turn.crop_vision_tokens}</b> vision tokens</p></div>`;
     }
     if (turn.answer) {
-      h += `<div class="tblk"><span class="tk">final answer</span><div class="fin">${esc(turn.answer)}</div></div>`;
+      h += `<div class="tblk"><span class="tk">final answer</span>` +
+        `<div class="fin${correct ? "" : " bad"}">${esc(turn.answer)}</div></div>`;
     }
     return h + `</div>`;
   }).join("");
@@ -78,7 +79,7 @@ function traceCol(who, s) {
   const r = s[who] || {};
   return `<div class="tcol ${who}">
     ${colHead(who, r)}
-    <div class="turns">${turnsHtml(r.trace)}</div>
+    <div class="turns">${turnsHtml(r.trace, r.correct)}</div>
   </div>`;
 }
 

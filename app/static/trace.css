@@ -26,8 +26,9 @@
 .tcol .head .name { font-size: 14px; font-weight: 600; letter-spacing: -0.015em; }
 .tcol .head .spacer { flex: 1; }
 
+/* The wrapper must be exactly the image box: the boxes are positioned in percentages of it,
+   so any letterboxing (object-fit, a max-height) slides every box off its target. */
 .tcol .shotwrap { margin-top: 13px; }
-.tcol .shotwrap img { max-height: 460px; width: 100%; object-fit: contain; }
 
 .tans { margin-top: 12px; }
 .tans .k { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); }

@@ -155,24 +155,31 @@ function zoomTable() {
 }
 
 function hyper() {
-  const s = D.hyper.shared, d = D.hyper.differs;
-  $("#hp-line").textContent =
-    `GRPO · ${s.group_size} rollouts × ${s.prompts_per_step} prompts per step · ` +
-    `LoRA r${s.lora_rank} · lr ${s.lr} · ${s.minutes} min per run`;
+  const sh = D.hyper.shared, d = D.hyper.differs;
+  const chips = [
+    ["algorithm", "GRPO"],
+    ["rollouts × prompts", `${sh.group_size} × ${sh.prompts_per_step}`],
+    ["LoRA rank", `r${sh.lora_rank}`],
+    ["learning rate", sh.lr],
+    ["KL coeff", sh.kl_coef],
+    ["PPO clip", sh.clip_eps],
+    ["max zooms", sh.max_zooms],
+    ["max new tokens", sh.max_new_tokens],
+    ["thumbnail", `÷${sh.downsample}, ≤${sh.thumb_max_side}px`],
+    ["temperature", sh.temperature],
+    ["seed", sh.seed],
+    ["wall clock", `${sh.minutes} min`],
+  ];
+  const box = $("#hp-shared");
+  if (box) box.innerHTML = chips.map(([k, v]) =>
+    `<span class="chip"><i>${k}</i><b class="num">${v}</b></span>`).join("");
+
   const rows = [
-    ["algorithm", "GRPO, group is the baseline", "GRPO, group is the baseline"],
-    ["rollouts per prompt (G)", s.group_size, s.group_size],
-    ["prompts per step", s.prompts_per_step, s.prompts_per_step],
+    ["cost term", "none", "measured M4 ms @ Q4"],
+    ["λ", "0", d.b.lambda.toExponential(2)],
     ["gradient steps", d.a.steps, d.b.steps],
-    ["LoRA rank / lr", `r${s.lora_rank} · ${s.lr}`, `r${s.lora_rank} · ${s.lr}`],
-    ["KL coeff / clip", `${s.kl_coef} · ${s.clip_eps}`, `${s.kl_coef} · ${s.clip_eps}`],
-    ["max zooms / new tokens", `${s.max_zooms} · ${s.max_new_tokens}`, `${s.max_zooms} · ${s.max_new_tokens}`],
-    ["thumbnail", `÷${s.downsample}, ≤${s.thumb_max_side}px`, `÷${s.downsample}, ≤${s.thumb_max_side}px`],
-    ["temperature / seed", `${s.temperature} · ${s.seed}`, `${s.temperature} · ${s.seed}`],
-    ["<b>cost term</b>", "<b>none</b>", "<b>measured M4 ms @ Q4</b>"],
-    ["<b>λ</b>", "0", `<b>${d.b.lambda.toExponential(2)}</b>`],
-  ].map((r) => ({ cells: r.map((v) => ({ v })) }));
-  table($("#t-hyper"), ["", "Run A", "Run B"], rows);
+  ].map((r) => ({ cells: r.map((v, i) => ({ v, best: i === 2 })) }));
+  table($("#t-hyper"), ["what differs", "No cost", "Cost-aware"], rows);
 }
 
 /* ---------- charts ---------------------------------------------------- */
@@ -280,23 +287,6 @@ function boxOverlay(sid, boxes, color) {
     return `<span class="bx" style="${st}"><i style="background:${color}">${i + 1}</i></span>`;
   }).join("");
   return `<div class="shotwrap"><img src="/img/${sid}" alt="" loading="lazy">${marks}</div>`;
-}
-
-function traceHtml(t) {
-  if (!t || !t.length) return `<p class="tmeta">No turns recorded.</p>`;
-  return t.map((turn, i) => {
-    let h = `<div class="turn"><div class="tno">turn ${i + 1}</div>`;
-    if (turn.think) h += `<div class="tblk"><span class="tk">thinking</span><p>${esc(turn.think)}</p></div>`;
-    if (turn.tool) {
-      const a = turn.tool.arguments || {};
-      h += `<div class="tblk"><span class="tk">tool call</span><pre class="num">image_zoom_in_tool(
-  bbox_2d = [${(a.bbox_2d || []).join(", ")}]${a.label ? `,\n  label = ${JSON.stringify(a.label)}` : ""}
-)</pre></div>`;
-    }
-    if (turn.crop_vision_tokens) h += `<div class="tblk"><span class="tk">crop returned</span><p class="num">${turn.crop_vision_tokens} vision tokens</p></div>`;
-    if (turn.answer) h += `<div class="tblk"><span class="tk">answer</span><p><b>${esc(turn.answer)}</b></p></div>`;
-    return h + `</div>`;
-  }).join("");
 }
 
 const esc = (s) => (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
