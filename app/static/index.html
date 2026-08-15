@@ -18,9 +18,13 @@
   </header>
 
   <p class="tagline">
-    A 4B vision model decides <b>where to look</b> in a high-resolution image. The reward charges
-    <b>milliseconds measured on the machine it ships to</b>, not a token count. Same accuracy,
-    <b id="tag-speed">2.18&times;</b> faster on device.
+    In this project I fine-tune Qwen3.5-4B to use a zoom-in tool, so it can decide
+    <b>where to look</b> in a high-resolution image instead of reading the whole thing at once.
+    The interesting part is the reward: we grade it on <b>correctness and latency</b>, where
+    latency is milliseconds I measured on the machine the model actually ships to, not a token
+    count standing in for one. We train two runs that are identical in every way except that one
+    term, and the cost-aware run matches the baseline's accuracy while running
+    <b>2.18&times; faster</b> on device. What surprised me is where the saving came from.
   </p>
 
   <div class="hero" id="hero"></div>
@@ -35,6 +39,8 @@
   <div class="page on" id="p-results">
   <section>
     <h2><span class='sn'>1</span>The reward</h2>
+    <p class="sub">Let's write down what we are actually optimising, because the whole project
+    lives in one line.</p>
     <div class="formula">
       <code>reward = correct ? (1 &minus; &lambda; &middot; cost_ms) : 0</code>
       <code class="dim">cost_ms = 1.411&middot;vision_tokens + 13.198&middot;decode_tokens + 101.79&middot;zooms</code>
@@ -42,23 +48,27 @@
     <div class="rwrap">
       <div class="rcard"><div class="rname">No cost</div>
         <code>&lambda; = 0</code>
-        <p>Get it right, score 1. Get it wrong, score 0. Nothing else counts, so looking and
-        thinking are free.</p></div>
+        <p>Get it right and you score 1, get it wrong and you score 0. Nothing else enters the
+        reward, so looking and thinking are free.</p></div>
       <div class="rcard on"><div class="rname">Cost-aware</div>
         <code>&lambda; = 5.85e&minus;5</code>
-        <p>Same, minus what the episode costs in milliseconds. The three coefficients were
-        measured on an M4 Max, not guessed.</p></div>
+        <p>The same, minus what the episode actually cost in milliseconds. I fitted those three
+        coefficients on an M4 Max rather than guessing them.</p></div>
     </div>
     <div class="note">
-      The cost only applies <b>if the answer is right</b>. That matters: the model can never buy
-      speed by being wrong, so the two runs stay comparable on accuracy by construction.
+      The thing to notice is that the cost is inside the <code>correct</code> branch. If the
+      answer is wrong the reward is 0 no matter how fast we got there, so the model can never buy
+      speed by being wrong. That is what keeps the two runs comparable on accuracy — not luck, just
+      where we put the parenthesis.
     </div>
   </section>
 
   <section>
     <h2><span class='sn'>2</span>Results</h2>
     <p class="sub">
-      Identical code, data, seed and budget — one term in the reward differs.
+      Both runs share the same code, the same data in the same order, the same seed and the same
+      wall-clock budget. The only thing that changes is <code>&lambda;</code>. So anything we see
+      below is caused by the cost term and nothing else.
     </p>
     <div class="scroll"><table id="t-headline"></table></div>
     <div class="key">
@@ -76,10 +86,12 @@
   <section>
     <h2><span class='sn'>3</span>What looking buys</h2>
     <p class="sub">
-      Same policy, same <span class="num">96</span> V*Bench questions, zoom allowed vs. forbidden.
-      V*Bench is <span class="num">191</span> high-resolution photos (~2250&times;1500) where the
-      thing being asked about covers roughly <span class="num">0.06%</span> of the frame — small
-      enough that a downscaled view genuinely cannot answer it.
+      Before comparing the two runs, it is worth checking the tool is doing anything at all. So we
+      take the same policy and the same 96 V*Bench questions, and run them twice — once with the
+      zoom tool available, once with it taken away. V*Bench is 191 high-resolution photos, around
+      2250&times;1500, where the thing being asked about covers roughly 0.06% of the frame. That
+      is small enough that a downscaled view genuinely cannot answer it, which is exactly the
+      setting we want.
     </p>
     <div class="scroll"><table id="t-zoom"></table></div>
   </section>
@@ -87,7 +99,9 @@
   <section>
     <h2><span class='sn'>4</span>Across quantizations</h2>
     <p class="sub">
-      Precision changes how much the model says, not just how fast it runs.
+      Quantization is usually treated as a speed knob. It is not only that — it also changes how
+      much the model says, and since decode tokens dominate the cost, that changes what an episode
+      costs.
     </p>
     <div class="scroll"><table id="t-quant"></table></div>
   </section>
@@ -113,7 +127,8 @@
   <section>
     <h2><span class='sn'>7</span>Examples</h2>
     <p class="sub">
-      All <span class="num">191</span> V*Bench questions, grouped by who got them right.
+      If the two runs really are equally accurate, they should not be accurate on the same
+      questions. Here are all 191, grouped by who got them right.
     </p>
     <div class="cells" id="cells"></div>
     <div id="samples"></div>
@@ -126,7 +141,9 @@
   <section>
     <h2><span class='sn'>8</span>Run it yourself</h2>
     <p class="sub">
-      Watch where the policy looks. Turn down-projection off to send the full image instead.
+      Drag in an image and ask about something small in it. You can watch the policy pick a box,
+      get the crop back, and answer. Turning down-projection off sends the full-resolution image
+      in one shot instead, which is the expensive way to do it.
     </p>
     <div class="demo">
       <div id="chat" class="chat" data-drop="1"></div>

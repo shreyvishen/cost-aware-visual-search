@@ -102,11 +102,13 @@ function headline() {
       `<div class="savekey"><span><i style="background:#2f5cff"></i>thinking ${Math.round(pc(dDec))}%</span>` +
       `<span><i style="background:#93a8ff"></i>looking ${Math.round(pc(dVis))}%</span>` +
       `<span><i style="background:#d6ddff"></i>tool calls ${Math.round(pc(dTool))}%</span></div>` +
-      `<div class="savenote">Almost all of that came from the model spending less time ` +
-      `<b>thinking</b>, not from cutting back on where it looked. A decode token costs ` +
-      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span> against ` +
-      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> for a vision token, so thinking is ` +
-      `where the milliseconds actually are.</div>`;
+      `<div class="savenote">Here is the part I did not expect. Almost none of that saving came ` +
+      `from looking less — it came from the model <b>thinking less</b> before it answered. That ` +
+      `makes sense once you look at the coefficients: a decode token costs ` +
+      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span> and a vision token costs ` +
+      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span>, so the milliseconds were never in ` +
+      `the looking. Had we counted tool calls instead of measuring time, we would have taught it ` +
+      `the opposite lesson.</div>`;
   }
 }
 
@@ -250,8 +252,9 @@ function charts() {
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
   $("#n-train").innerHTML =
-    `The cost-aware curve sits lower because it is paying the cost term — that is the point, ` +
-    `not a worse run. What matters is what the behaviour curves do underneath it.`;
+    `The cost-aware reward sits lower than the baseline, but that is not a worse run — it is ` +
+    `paying the cost term, which is the whole point. What we care about is what the behaviour ` +
+    `curves do underneath it.`;
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
@@ -281,8 +284,9 @@ function matrix() {
   $("#n-matrix").innerHTML =
     `The two policies disagree on <span class="num">${m.only_a + m.only_b}</span> of 191 questions, ` +
     `almost evenly split — <span class="num">${m.only_a}</span> to A, ` +
-    `<span class="num">${m.only_b}</span> to cost-aware — an even split. The two policies are equally ` +
-    `accurate; they are simply wrong about different pictures.`;
+    `<span class="num">${m.only_b}</span> to cost-aware. That is about as even as it gets, which ` +
+    `is what we should expect: the two policies are equally accurate, they are just wrong about ` +
+    `different pictures.`;
 }
 
 function boxOverlay(sid, boxes, color) {
