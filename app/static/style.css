@@ -104,11 +104,12 @@ th .src { display:block; font-size:10px; color:var(--ink-4); font-weight:400; ma
 .note { margin-top:18px; font-size:15px; line-height:1.6; color:var(--ink-2);
   border:0; padding:0; max-width:none; }
 .note b { color:var(--ink); font-weight:600; }
-.key { display:block; margin-top:14px; font-size:13.5px; color:var(--ink-3); line-height:1.7; }
-.key span::after { content:" · "; color:var(--ink-4); }
-.key span:last-child::after { content:""; }
-.key i { font-style:normal; font-family:var(--mono); font-size:.92em; color:var(--ink-2); }
-.key i::after { content:" "; }
+.key { display:grid; grid-template-columns:max-content 1fr; gap:5px 18px; margin:16px 0 0;
+  font-size:13.5px; line-height:1.55; }
+.key dt { font-family:var(--mono); font-size:12px; color:var(--ink); white-space:nowrap; }
+.key dd { margin:0; color:var(--ink-3); }
+@media (max-width:560px){ .key{ grid-template-columns:1fr; gap:1px 0; }
+  .key dd{ margin-bottom:8px; } }
 .saveline { font-size:15px; color:var(--ink-2); }
 .saveline b { color:var(--ink); font-weight:600; }
 .savebar { display:flex; height:4px; margin:13px 0 7px; background:var(--hair); max-width:100%; }

@@ -71,38 +71,25 @@
       below is caused by the cost term and nothing else.
     </p>
     <div class="scroll"><table id="t-headline"></table></div>
-    <div class="key">
-      <span><i>accuracy</i>share of the 191 V*Bench questions answered correctly, on the training rig</span>
-      <span><i>zooms</i>tool calls per question</span>
-      <span><i>prefill</i>tokens read in — the image plus the prompt</span>
-      <span><i>decode</i>tokens written out — the model thinking and answering</span>
-      <span><i>latency</i>wall clock per question on an M4 Max at Q4</span>
-      <span><i>$ / 1k</i>at $0.03/M in and $0.15/M out</span>
-    </div>
+    <dl class="key">
+      <dt>accuracy</dt><dd>share of the 191 V*Bench questions answered correctly, on the training rig</dd>
+      <dt>zooms</dt><dd>tool calls per question</dd>
+      <dt>prefill</dt><dd>tokens read in — the image plus the prompt</dd>
+      <dt>decode</dt><dd>tokens written out — the model thinking and answering</dd>
+      <dt>latency</dt><dd>wall clock per question, M4 Max at Q4</dd>
+      <dt>$ / 1k</dt><dd>at $0.03/M in and $0.15/M out</dd>
+    </dl>
     <div class="note" id="n-headline"></div>
   </section>
 
   <!-- what looking buys -->
   <section>
     <h2><span class='sn'>3</span>What looking buys</h2>
-    <p class="sub">
-      Before comparing the two runs, it is worth checking the tool is doing anything at all. So we
-      take the same policy and the same 96 V*Bench questions, and run them twice — once with the
-      zoom tool available, once with it taken away. V*Bench is 191 high-resolution photos, around
-      2250&times;1500, where the thing being asked about covers roughly 0.06% of the frame. That
-      is small enough that a downscaled view genuinely cannot answer it, which is exactly the
-      setting we want.
-    </p>
     <div class="scroll"><table id="t-zoom"></table></div>
   </section>
 
   <section>
     <h2><span class='sn'>4</span>Across quantizations</h2>
-    <p class="sub">
-      Quantization is usually treated as a speed knob. It is not only that — it also changes how
-      much the model says, and since decode tokens dominate the cost, that changes what an episode
-      costs.
-    </p>
     <div class="scroll"><table id="t-quant"></table></div>
   </section>
   </div>
