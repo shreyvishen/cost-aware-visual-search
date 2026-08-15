@@ -84,7 +84,7 @@ function traceCol(who, s) {
 }
 
 function render(s, cellName) {
-  document.title = s.question + " — trace";
+  document.title = s.question + " · trace";
   $("#t-eyebrow").textContent = cellName ? `Trace · ${cellName}` : "Trace";
   $("#t-q").textContent = s.question;
   $("#t-gold").innerHTML = `Gold answer: <b>${esc(s.gold)}</b>`;
@@ -107,7 +107,7 @@ function missing(msg) {
 
 function boot() {
   const sid = new URLSearchParams(location.search).get("sid");
-  if (!sid) return missing("No sid in the URL — this page needs /trace.html?sid=…");
+  if (!sid) return missing("No sid in the URL. This page needs /trace.html?sid=…");
   fetch("/data.json", { cache: "no-store" })
     .then((r) => r.json())
     .then((D) => {

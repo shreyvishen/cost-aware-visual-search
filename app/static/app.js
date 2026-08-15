@@ -240,7 +240,7 @@ function charts() {
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.decode) },
   ], (v) => Math.round(v)));
   box.appendChild(line("Figure 4. cost_ms",
-    "both priced on the same table — no-cost never saw this term, so its line just drifts", [
+    "both priced on the same table; no-cost never saw this term, so its line just drifts", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.cost_q4) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.cost_q4) },
   ], (v) => Math.round(v)));
@@ -435,7 +435,7 @@ async function run() {
         break;
       case "image":
         shown = chatEl("msg bot",
-          `<div class="lbl">${down ? "what it sees — down-projected" : "what it sees — full resolution"}
+          `<div class="lbl">${down ? "what it sees, down-projected" : "what it sees, full resolution"}
              <span class="num">${ev.w}×${ev.h}</span>
              <span class="num dim">from ${ev.orig_w}×${ev.orig_h}</span></div>
            <div class="shotwrap live"><img src="data:image/png;base64,${ev.png_b64}" alt=""></div>`);
