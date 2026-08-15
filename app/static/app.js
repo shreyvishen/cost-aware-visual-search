@@ -267,8 +267,8 @@ function matrix() {
   $("#n-matrix").innerHTML =
     `A and B disagree on <span class="num">${m.only_a + m.only_b}</span> of 191 questions, ` +
     `almost evenly split — <span class="num">${m.only_a}</span> to A, ` +
-    `<span class="num">${m.only_b}</span> to B. That near-tie is the McNemar result: the two ` +
-    `policies are equally accurate, they are simply wrong about different pictures.`;
+    `<span class="num">${m.only_b}</span> to B — an even split. The two policies are equally ` +
+    `accurate; they are simply wrong about different pictures.`;
 }
 
 function boxOverlay(sid, boxes, color) {
