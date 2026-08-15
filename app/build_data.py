@@ -34,7 +34,7 @@ def main() -> None:
         return [r for r in m4 if r.get("tag") == t and r.get("quant") == q]
 
     # ---- headline: base vs A vs B on the same 36 images, M4 @ Q4 ----------------
-    models = [("a", "Run A", "run_a_final"), ("b", "Run B", "run_b_final")]
+    models = [("a", "No cost", "run_a_final"), ("b", "Cost-aware", "run_b_final")]
     headline = []
     for key, label, t in models:
         d = tag(t)
@@ -159,8 +159,8 @@ def main() -> None:
     quant = []
     for q in ("q4", "q8", "bf16"):
         for key, label, t in [("base", "Base", f"base_{q}"),
-                              ("a", "Run A", "run_a_final" if q == "q4" else f"run_a_{q}_final"),
-                              ("b", "Run B", "run_b_final" if q == "q4" else f"run_b_{q}_final")]:
+                              ("a", "No cost", "run_a_final" if q == "q4" else f"run_a_{q}_final"),
+                              ("b", "Cost-aware", "run_b_final" if q == "q4" else f"run_b_{q}_final")]:
             d = tag(t, q)
             if not d:
                 continue

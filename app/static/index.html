@@ -34,7 +34,7 @@
 
   <div class="page on" id="p-results">
   <section>
-    <h2>Run A vs. Run B</h2>
+    <h2>No cost vs. cost-aware</h2>
     <p class="sub">
       Identical code, data, seed and budget. One term in the reward differs.
     </p>
@@ -73,6 +73,8 @@
   <!-- hyperparameters -->
   <section>
     <h2>Hyperparameters</h2>
+    <p class="sub">Everything is shared except the last two rows.</p>
+    <div id="hp-shared" class="chips"></div>
     <div class="scroll"><table id="t-hyper"></table></div>
   </section>
 
@@ -110,8 +112,8 @@
           <div class="crow">
             <span id="f-name" class="fname num"></span>
             <select id="f-model" title="model">
-              <option value="a">Run A — no cost term</option>
-              <option value="b" selected>Run B — measured ms</option>
+              <option value="a">No cost</option>
+              <option value="b" selected>Cost-aware</option>
             </select>
             <select id="f-quant" title="quantization">
               <option value="q4" selected>Q4_K_M</option>
@@ -126,14 +128,6 @@
     </div>
   </section>
   </div>
-
-  <footer>
-    Qwen3.5-4B, LoRA rank 16, GRPO. Cost model fitted on an M4 Max
-    (<span class="num" id="f-coeffs"></span>), predicts real device time at
-    <span class="num">r&nbsp;&ge;&nbsp;0.999</span>.
-    Token pricing <span class="num">$0.03</span>/M in, <span class="num">$0.15</span>/M out.
-    One run per condition, 16&ndash;17 gradient steps &mdash; directional, not converged.
-  </footer>
 
 </div>
 <script src="/app.js"></script>

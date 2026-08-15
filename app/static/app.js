@@ -135,7 +135,7 @@ function zoomTable() {
     rows.push({
       hi: k === "b",
       cells: [
-        "Run " + k.toUpperCase(),
+        k === "a" ? "No cost" : "Cost-aware",
         n3(x.ref_nozoom), n3(x.ref_zoom),
         `<span class="win">+${gain.toFixed(3)}</span>`,
         `+${Math.round((gain / x.ref_nozoom) * 100)}%`,
@@ -213,39 +213,38 @@ function charts() {
   const box = $("#charts"); box.innerHTML = "";
   const pick = (k, f) => (D.curves[k] || []).map((r) => [r.step, f(r)]);
   box.appendChild(line("Mean reward", "reward = correct ? 1 − λ·cost_ms : 0 — this is the RL objective", [
-    { name: "A", color: CA, pts: pick("a", (r) => r.reward) },
-    { name: "B", color: CB, pts: pick("b", (r) => r.reward) },
+    { name: "no cost", color: CA, pts: pick("a", (r) => r.reward) },
+    { name: "cost-aware", color: CB, pts: pick("b", (r) => r.reward) },
   ], (v) => v.toFixed(2)));
   box.appendChild(line("Zooms per question", "how much the policy looks", [
-    { name: "A", color: CA, pts: pick("a", (r) => r.zooms) },
-    { name: "B", color: CB, pts: pick("b", (r) => r.zooms) },
+    { name: "no cost", color: CA, pts: pick("a", (r) => r.zooms) },
+    { name: "cost-aware", color: CB, pts: pick("b", (r) => r.zooms) },
   ], (v) => v.toFixed(2)));
   box.appendChild(line("Decode tokens", "how much the policy thinks", [
-    { name: "A", color: CA, pts: pick("a", (r) => r.decode) },
-    { name: "B", color: CB, pts: pick("b", (r) => r.decode) },
+    { name: "no cost", color: CA, pts: pick("a", (r) => r.decode) },
+    { name: "cost-aware", color: CB, pts: pick("b", (r) => r.decode) },
   ], (v) => Math.round(v)));
   box.appendChild(line("cost_ms — the term inside the reward",
     "a·vision + b·decode + c·zooms, both runs priced on the frozen Q4 table", [
-    { name: "A", color: CA, pts: pick("a", (r) => r.cost_q4) },
-    { name: "B", color: CB, pts: pick("b", (r) => r.cost_q4) },
+    { name: "no cost", color: CA, pts: pick("a", (r) => r.cost_q4) },
+    { name: "cost-aware", color: CB, pts: pick("b", (r) => r.cost_q4) },
   ], (v) => Math.round(v)));
 
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
   $("#n-train").innerHTML =
-    `B's reward sits lower because it is paying the cost term — compare behaviour, not height.` +
-    `<br>A binary reward ties often, and a tied group of 8 teaches nothing. The cost term breaks ` +
-    `those ties, so B learned from <span class="num">${Math.round(gb / gbt * 100)}%</span> of its ` +
-    `groups against A's <span class="num">${Math.round(ga / gat * 100)}%</span> — and because cost ` +
-    `only separates rollouts that are <i>already correct</i>, it cannot trade accuracy for speed.`;
+    `The cost-aware reward runs lower because it pays the cost term — read the behaviour curves, not the ` +
+    `height. A tied group of 8 teaches nothing, and a binary reward ties often: it learned from ` +
+    `<span class="num">${Math.round(gb / gbt * 100)}%</span> of its groups against no-cost's ` +
+    `<span class="num">${Math.round(ga / gat * 100)}%</span>.`;
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
 
 const CELLS = [
   ["both_right", "Both right"],
-  ["only_a", "Only A right"],
-  ["only_b", "Only B right"],
+  ["only_a", "Only no-cost"],
+  ["only_b", "Only cost-aware"],
   ["both_wrong", "Both wrong"],
 ];
 
@@ -265,9 +264,9 @@ function matrix() {
   showSamples("only_a");
   const m = D.matrix;
   $("#n-matrix").innerHTML =
-    `A and B disagree on <span class="num">${m.only_a + m.only_b}</span> of 191 questions, ` +
+    `The two policies disagree on <span class="num">${m.only_a + m.only_b}</span> of 191 questions, ` +
     `almost evenly split — <span class="num">${m.only_a}</span> to A, ` +
-    `<span class="num">${m.only_b}</span> to B — an even split. The two policies are equally ` +
+    `<span class="num">${m.only_b}</span> to cost-aware — an even split. The two policies are equally ` +
     `accurate; they are simply wrong about different pictures.`;
 }
 
@@ -503,7 +502,5 @@ async function run() {
 
 fetch("/data.json").then((r) => r.json()).then((d) => {
   D = d;
-  $("#f-coeffs").textContent =
-    `a=${d.coeffs.a.toFixed(2)} b=${d.coeffs.b.toFixed(1)} c=${d.coeffs.c.toFixed(0)} ms, R²=${d.coeffs.r2.toFixed(4)}`;
   hero(); tabs(); headline(); zoomTable(); hyper(); charts(); matrix(); quant(); demo();
 });
