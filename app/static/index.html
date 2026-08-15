@@ -34,7 +34,7 @@
 
   <div class="page on" id="p-results">
   <section>
-    <h2>The reward</h2>
+    <h2><span class='sn'>1</span>The reward</h2>
     <div class="formula">
       <code>reward = correct ? (1 &minus; &lambda; &middot; cost_ms) : 0</code>
       <code class="dim">cost_ms = 1.411&middot;vision_tokens + 13.198&middot;decode_tokens + 101.79&middot;zooms</code>
@@ -56,7 +56,7 @@
   </section>
 
   <section>
-    <h2>No cost vs. cost-aware</h2>
+    <h2><span class='sn'>2</span>Results</h2>
     <p class="sub">
       Identical code, data, seed and budget — one term in the reward differs.
     </p>
@@ -74,7 +74,7 @@
 
   <!-- what looking buys -->
   <section>
-    <h2>What looking buys</h2>
+    <h2><span class='sn'>3</span>What looking buys</h2>
     <p class="sub">
       Same policy, same <span class="num">96</span> V*Bench questions, zoom allowed vs. forbidden.
       V*Bench is <span class="num">191</span> high-resolution photos (~2250&times;1500) where the
@@ -85,7 +85,7 @@
   </section>
 
   <section>
-    <h2>Across quantizations</h2>
+    <h2><span class='sn'>4</span>Across quantizations</h2>
     <p class="sub">
       Precision changes how much the model says, not just how fast it runs.
     </p>
@@ -95,14 +95,14 @@
 
   <div class="page" id="p-training">
   <section>
-    <h2>Training</h2>
+    <h2><span class='sn'>5</span>Training dynamics</h2>
     <div class="charts" id="charts"></div>
     <div class="note" id="n-train"></div>
   </section>
 
   <!-- hyperparameters -->
   <section>
-    <h2>Hyperparameters</h2>
+    <h2><span class='sn'>6</span>Hyperparameters</h2>
     <div id="hp-shared" class="chips"></div>
     <div class="scroll"><table id="t-hyper"></table></div>
   </section>
@@ -111,7 +111,7 @@
 
   <div class="page" id="p-examples">
   <section>
-    <h2>Examples</h2>
+    <h2><span class='sn'>7</span>Examples</h2>
     <p class="sub">
       All <span class="num">191</span> V*Bench questions, grouped by who got them right.
     </p>
@@ -124,12 +124,12 @@
 
   <div class="page" id="p-demo">
   <section>
-    <h2>Try it</h2>
+    <h2><span class='sn'>8</span>Run it yourself</h2>
     <p class="sub">
       Watch where the policy looks. Turn down-projection off to send the full image instead.
     </p>
     <div class="demo">
-      <div id="chat" class="chat"></div>
+      <div id="chat" class="chat" data-drop="1"></div>
       <div class="composer">
         <label class="attach" for="f-img">
           <input type="file" id="f-img" accept="image/*" hidden>

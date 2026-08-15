@@ -25,8 +25,12 @@ function markBest(rows, col, dir) {
   if (bi >= 0) rows[bi].cells[col].best = true;
 }
 
-function table(node, cols, rows) {
+function table(node, cols, rows, caption) {
   node.innerHTML = "";
+  if (caption) {
+    const c = el("caption", null, caption);
+    node.appendChild(c);
+  }
   const thead = el("thead");
   const tr = el("tr");
   cols.forEach((c) => tr.appendChild(el("th", null, c)));
@@ -74,7 +78,8 @@ function headline() {
   });
   markBest(rows, 1, "hi");   // accuracy
   [2, 3, 4, 5, 6].forEach((c) => markBest(rows, c, "lo"));  // everything else: less is better
-  table($("#t-headline"), cols, rows);
+  table($("#t-headline"), cols, rows,
+    "<b>Table 1.</b> Both policies on V*Bench. Accuracy over all 191 questions on the training rig; tokens, latency and cost measured on an M4 Max at Q4_K_M over 36 questions.");
 
   const a = by.a, b = by.b;
   if (a && b) {
@@ -151,7 +156,8 @@ function zoomTable() {
     r.cells[3].raw = x.ref_zoom - x.ref_nozoom;
   });
   [2, 3].forEach((c) => markBest(rows, c, "hi"));
-  table($("#t-zoom"), ["", "zoom disabled", "zoom allowed", "gain", "relative"], rows);
+  table($("#t-zoom"), ["", "zoom disabled", "zoom allowed", "gain", "relative"], rows,
+    "<b>Table 2.</b> The same 96 questions answered twice, once with the zoom tool available and once without it.");
 }
 
 function hyper() {
@@ -179,7 +185,8 @@ function hyper() {
     ["λ", "0", d.b.lambda.toExponential(2)],
     ["gradient steps", d.a.steps, d.b.steps],
   ].map((r) => ({ cells: r.map((v, i) => ({ v, best: i === 2 })) }));
-  table($("#t-hyper"), ["what differs", "No cost", "Cost-aware"], rows);
+  table($("#t-hyper"), ["", "No cost", "Cost-aware"], rows,
+    "<b>Table 4.</b> Everything the two runs do not share.");
 }
 
 /* ---------- charts ---------------------------------------------------- */
@@ -222,19 +229,19 @@ const CA = "#a1a1ac", CB = "#2f5cff";
 function charts() {
   const box = $("#charts"); box.innerHTML = "";
   const pick = (k, f) => (D.curves[k] || []).map((r) => [r.step, f(r)]);
-  box.appendChild(line("Mean reward", "what each run was actually optimising", [
+  box.appendChild(line("Figure 1. Mean reward", "what each run was actually optimising", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.reward) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.reward) },
   ], (v) => v.toFixed(2)));
-  box.appendChild(line("Zooms per question", "how often it reaches for the tool", [
+  box.appendChild(line("Figure 2. Zooms per question", "how often it reaches for the tool", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.zooms) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.zooms) },
   ], (v) => v.toFixed(2)));
-  box.appendChild(line("Decode tokens", "how much it thinks before answering", [
+  box.appendChild(line("Figure 3. Decode tokens", "how much it thinks before answering", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.decode) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.decode) },
   ], (v) => Math.round(v)));
-  box.appendChild(line("cost_ms",
+  box.appendChild(line("Figure 4. cost_ms",
     "both priced on the same table — no-cost never saw this term, so its line just drifts", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.cost_q4) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.cost_q4) },
@@ -338,7 +345,8 @@ function quant() {
     const pair = rows.slice(i, i + 2);
     [1, 2, 3, 4, 5].forEach((c) => markBest(pair, c, "lo"));
   }
-  table($("#t-quant"), ["", "prefill tok", "decode tok", "zooms", "latency", "$ / 1k"], rows);
+  table($("#t-quant"), ["", "prefill tok", "decode tok", "zooms", "latency", "$ / 1k"], rows,
+    "<b>Table 3.</b> Each policy at three quantizations, measured on the M4.");
 }
 
 /* ---------- live demo: a chat pane that shows the episode happening ------ */
@@ -367,6 +375,26 @@ function demo() {
     $("#f-preview").innerHTML = f ? `<img src="${URL.createObjectURL(f)}" alt="">` : "";
   };
   go.onclick = run;
+
+  // drag an image anywhere onto the chat pane
+  const drop = $("#chat");
+  const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => {
+    stop(e); drop.classList.add("dragging");
+  }));
+  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => {
+    stop(e); if (ev === "dragleave" && drop.contains(e.relatedTarget)) return;
+    drop.classList.remove("dragging");
+  }));
+  drop.addEventListener("drop", (e) => {
+    const f = [...(e.dataTransfer?.files || [])].find((x) => x.type.startsWith("image/"));
+    if (!f) return;
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    file.files = dt.files;
+    file.dispatchEvent(new Event("change"));
+    $("#f-q").focus();
+  });
   $("#f-q").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
 }
 
