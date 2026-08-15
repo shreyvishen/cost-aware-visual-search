@@ -1,0 +1,41 @@
+# README.md is the only document that ships. The rest of the root markdown is working
+# notes: goal, task list, ledger, negative results, agent instructions.
+/*.md
+!/README.md
+
+# Local-only notes, never leave this machine.
+.notes/
+
+# Generated. Rebuild it, do not commit it.
+/app/static/data.json
+/out/
+/results.md
+
+# Measurement artifacts. They belong to a run, not to the code, and they are large.
+/eval/
+/cost_model/raw/
+/cost_model/m4_measurements.csv
+/cost_model/fit_report.md
+
+# Run artifacts are mirrored to ~/archive/cost-aware-vlm.
+/runs/
+
+# Weights, datasets, captures, images. None of this belongs in a source repo.
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+*.npy
+*.npz
+*.jsonl
+*.parquet
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+__pycache__/
+*.pyc
+.venv/
+.DS_Store

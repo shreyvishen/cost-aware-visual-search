@@ -1,0 +1,73 @@
+{
+  "quant": "bf16",
+  "a_ms_per_vision_token": 1.2982965957240342,
+  "b_ms_per_decode_token": 27.892748894703164,
+  "c_ms_per_tool_call": 32.98247901296266,
+  "intercept_ms": 18.915693492413826,
+  "r2": 0.9991836184427196,
+  "n_points": 60,
+  "measured_at": "2026-08-15T10:31:33+00:00",
+  "sha256": "9f0f1137cb32b2368c1ae316113e6a43315123a46bb33e70e684680a5dfacd33",
+  "notes": "Shipped the with-intercept fit (R^2 0.99918 vs 0.99918). Measured on an M4 Max via llama-server (libllama+libmtmd, Metal, -ngl 99), NOT llama-mtmd-cli: this build's mtmd-cli emits no llama_perf block. Response variable = prompt_ms + predicted_ms from the server timings object (image encode + prefill + decode); process startup excluded. RMSE 140.2 ms, MAPE 1.50%, max |residual| 659.1 ms, VIF (vision, decode, tool) = (1.26, 1.02, 1.26). UNITS: vision_tokens come from cost_model/vision_tokens.py::vision_tokens_for, which reproduces the rig's HF Qwen2VLImageProcessor exactly -- Qwen smart_resize with factor=patch16*merge2=32, min_pixels=65536 (floor 64 tokens), max_pixels=16777216, banker's rounding; tokens=(w_bar/32)*(h_bar/32). Checked against 28 sizes run through the real processor at /srv/ai/models/current/qwen35-4b, 28/28 exact. Training MUST import that function or the reward units are silently wrong. NOTE llama.cpp's clip uses DIFFERENT clamps (min_pixels=9216, max_pixels=4194304, half-away rounding) -- vision_tokens_llamacpp covers that, and it is only for predicting Mac demo latency. The two rules agree exactly on every image size in this fit (256/384/512/768/1024 square), so a is in HF units across the measured range. Reduced grid, not the full 240-run GOAL sec.18 grid; see fit_report.md for the exact points dropped. Measurements were serial by design (GOAL sec.19 fan-out deliberately not applied -- concurrent Metal work would poison every timing). Other work was running on the Mac. Held-out check on 8 grid cells the fit never saw (24 timed runs): R^2 0.99840, MAPE 2.04%, RMSE 216.8 ms, mean signed error -45.0 ms.",
+  "fit_detail": {
+    "shipped": "with_intercept",
+    "with_intercept": {
+      "intercept_ms": 18.915693492413826,
+      "a": 1.2982965957240342,
+      "b": 27.892748894703164,
+      "c": 32.98247901296266,
+      "r2": 0.9991836184427196,
+      "adj_r2": 0.9991398837164368,
+      "rmse_ms": 140.21204347807085,
+      "mape_pct": 1.499902946271826,
+      "max_abs_resid_ms": 659.1317808037074,
+      "cond": 1757.7458087235061
+    },
+    "no_intercept": {
+      "intercept_ms": 0.0,
+      "a": 1.3087690120622066,
+      "b": 27.923710740838935,
+      "c": 34.31651698947935,
+      "r2": 0.9991802916053638,
+      "adj_r2": 0.9991515299073064,
+      "rmse_ms": 140.4974421406274,
+      "mape_pct": 1.52144397056863,
+      "max_abs_resid_ms": 645.7871228858912,
+      "cond": 597.6916703976224
+    },
+    "vif": {
+      "vision_tokens": 1.257396774871647,
+      "decode_tokens": 1.0163413563914583,
+      "tool_calls": 1.2603611673843251
+    },
+    "n_configs": 20,
+    "reps_per_config_timed": 3,
+    "ranges": {
+      "vision_tokens": [
+        64.0,
+        2048.0
+      ],
+      "decode_tokens": [
+        32.0,
+        512.0
+      ],
+      "tool_calls": [
+        0.0,
+        4.0
+      ],
+      "total_ms": [
+        1014.814,
+        16728.465
+      ]
+    }
+  },
+  "validation": {
+    "n_points": 24,
+    "n_configs": 8,
+    "r2": 0.9983952844780382,
+    "rmse_ms": 216.84863451397214,
+    "mape_pct": 2.039396154250705,
+    "max_abs_err_ms": 492.8033138409519,
+    "mean_signed_err_ms": -45.00655769679949
+  }
+}
