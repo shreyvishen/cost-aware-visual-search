@@ -18,13 +18,10 @@
   </header>
 
   <p class="tagline">
-    In this project I fine-tune Qwen3.5-4B to use a zoom-in tool, so it can decide
-    <b>where to look</b> in a high-resolution image instead of reading the whole thing at once.
-    The interesting part is the reward: we grade it on <b>correctness and latency</b>, where
-    latency is milliseconds I measured on the machine the model actually ships to, not a token
-    count standing in for one. We train two runs that are identical in every way except that one
-    term, and the cost-aware run matches the baseline's accuracy while running
-    <b>2.18&times; faster</b> on device. What surprised me is where the saving came from.
+    I fine-tuned Qwen3.5-4B to use a zoom-in tool, so it decides <b>where to look</b> in a
+    high-resolution image instead of reading all of it. The reward grades it on
+    <b>correctness and latency</b> — real milliseconds I measured on the machine it ships to.
+    Two runs, identical except that one term.
   </p>
 
   <div class="hero" id="hero"></div>
@@ -39,8 +36,7 @@
   <div class="page on" id="p-results">
   <section>
     <h2><span class='sn'>1</span>The reward</h2>
-    <p class="sub">Let's write down what we are actually optimising, because the whole project
-    lives in one line.</p>
+    <p class="sub">The whole project lives in one line.</p>
     <div class="formula">
       <code>reward = correct ? (1 &minus; &lambda; &middot; cost_ms) : 0</code>
       <code class="dim">cost_ms = 1.411&middot;vision_tokens + 13.198&middot;decode_tokens + 101.79&middot;zooms</code>
@@ -56,20 +52,14 @@
         coefficients on an M4 Max rather than guessing them.</p></div>
     </div>
     <div class="note">
-      The thing to notice is that the cost is inside the <code>correct</code> branch. If the
-      answer is wrong the reward is 0 no matter how fast we got there, so the model can never buy
-      speed by being wrong. That is what keeps the two runs comparable on accuracy — not luck, just
-      where we put the parenthesis.
+      Notice the cost sits inside the <code>correct</code> branch. Answer wrong and you get 0 no
+      matter how fast you were, so the model can never buy speed by being wrong.
     </div>
   </section>
 
   <section>
     <h2><span class='sn'>2</span>Results</h2>
-    <p class="sub">
-      Both runs share the same code, the same data in the same order, the same seed and the same
-      wall-clock budget. The only thing that changes is <code>&lambda;</code>. So anything we see
-      below is caused by the cost term and nothing else.
-    </p>
+    <p class="sub">Same code, same data, same seed, same budget. Only &lambda; changes.</p>
     <div class="scroll"><table id="t-headline"></table></div>
     <dl class="key">
       <dt>accuracy</dt><dd>share of the 191 V*Bench questions answered correctly, on the training rig</dd>
@@ -113,10 +103,7 @@
   <div class="page" id="p-examples">
   <section>
     <h2><span class='sn'>7</span>Examples</h2>
-    <p class="sub">
-      If the two runs really are equally accurate, they should not be accurate on the same
-      questions. Here are all 191, grouped by who got them right.
-    </p>
+    <p class="sub">All 191 questions, grouped by who got them right.</p>
     <div class="cells" id="cells"></div>
     <div id="samples"></div>
     <div class="note" id="n-matrix"></div>
@@ -127,11 +114,8 @@
   <div class="page" id="p-demo">
   <section>
     <h2><span class='sn'>8</span>Run it yourself</h2>
-    <p class="sub">
-      Drag in an image and ask about something small in it. You can watch the policy pick a box,
-      get the crop back, and answer. Turning down-projection off sends the full-resolution image
-      in one shot instead, which is the expensive way to do it.
-    </p>
+    <p class="sub">Drag in an image and ask about something small in it. Turn down-projection
+      off to send the full-resolution image in one shot instead.</p>
     <div class="demo">
       <div id="chat" class="chat" data-drop="1"></div>
       <div class="composer">

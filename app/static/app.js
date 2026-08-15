@@ -84,7 +84,6 @@ function headline() {
   const a = by.a, b = by.b;
   if (a && b) {
     const sp = (a.latency_ms / b.latency_ms).toFixed(2);
-    $("#tag-speed").textContent = sp + "×";
     const cut = (x, y) => Math.round((1 - y / x) * 100);
     const dDec = (a.decode_tokens - b.decode_tokens) * D.coeffs.b;
     const dVis = (a.prefill_tokens - b.prefill_tokens) * D.coeffs.a;
@@ -102,13 +101,10 @@ function headline() {
       `<div class="savekey"><span><i style="background:#2f5cff"></i>thinking ${Math.round(pc(dDec))}%</span>` +
       `<span><i style="background:#93a8ff"></i>looking ${Math.round(pc(dVis))}%</span>` +
       `<span><i style="background:#d6ddff"></i>tool calls ${Math.round(pc(dTool))}%</span></div>` +
-      `<div class="savenote">Here is the part I did not expect. Almost none of that saving came ` +
-      `from looking less — it came from the model <b>thinking less</b> before it answered. That ` +
-      `makes sense once you look at the coefficients: a decode token costs ` +
-      `<span class="num">${D.coeffs.b.toFixed(1)} ms</span> and a vision token costs ` +
-      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span>, so the milliseconds were never in ` +
-      `the looking. Had we counted tool calls instead of measuring time, we would have taught it ` +
-      `the opposite lesson.</div>`;
+      `<div class="savenote">The saving came from the model <b>thinking less</b>, not looking ` +
+      `less. A decode token costs <span class="num">${D.coeffs.b.toFixed(1)} ms</span> and a ` +
+      `vision token <span class="num">${D.coeffs.a.toFixed(2)} ms</span> — the milliseconds were ` +
+      `never in the looking. Count tool calls instead and you teach it the opposite.</div>`;
   }
 }
 
@@ -252,9 +248,8 @@ function charts() {
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
   $("#n-train").innerHTML =
-    `The cost-aware reward sits lower than the baseline, but that is not a worse run — it is ` +
-    `paying the cost term, which is the whole point. What we care about is what the behaviour ` +
-    `curves do underneath it.`;
+    `The cost-aware reward sits lower because it is paying the cost term. Read the behaviour ` +
+    `curves underneath it, not the height.`;
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
@@ -284,9 +279,8 @@ function matrix() {
   $("#n-matrix").innerHTML =
     `The two policies disagree on <span class="num">${m.only_a + m.only_b}</span> of 191 questions, ` +
     `almost evenly split — <span class="num">${m.only_a}</span> to A, ` +
-    `<span class="num">${m.only_b}</span> to cost-aware. That is about as even as it gets, which ` +
-    `is what we should expect: the two policies are equally accurate, they are just wrong about ` +
-    `different pictures.`;
+    `<span class="num">${m.only_b}</span> to cost-aware. About as even as it gets — equally ` +
+    `accurate, just wrong about different pictures.`;
 }
 
 function boxOverlay(sid, boxes, color) {
@@ -515,5 +509,9 @@ async function run() {
 
 fetch("/data.json").then((r) => r.json()).then((d) => {
   D = d;
-  hero(); tabs(); headline(); zoomTable(); hyper(); charts(); matrix(); quant(); demo();
+  // Each block renders independently. A missing element in one section should cost you that
+  // section, not the whole page — this has bitten three times during the rebuild.
+  for (const fn of [hero, tabs, headline, zoomTable, hyper, charts, matrix, quant, demo]) {
+    try { fn(); } catch (e) { console.error(fn.name + "() failed:", e); }
+  }
 });
