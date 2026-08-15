@@ -87,7 +87,7 @@ function headline() {
     const tot = Math.max(dDec + dVis + dTool, 1);
     const pc = (v) => Math.max(0, (v / tot) * 100);
     $("#n-headline").innerHTML =
-      `<div class="saveline"><b>Same accuracy</b> · McNemar exact <span class="num">p = 1.000</span>` +
+      `<div class="saveline"><b>Same accuracy</b>` +
       ` &nbsp;·&nbsp; <b>${(a.latency_ms / b.latency_ms).toFixed(2)}× faster</b>` +
       ` &nbsp;·&nbsp; <b>${cut(a.usd_per_1k, b.usd_per_1k)}% cheaper</b></div>` +
       `<div class="savebar" title="where the saving comes from">` +
