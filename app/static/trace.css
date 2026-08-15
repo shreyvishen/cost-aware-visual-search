@@ -1,0 +1,62 @@
+/* Trace detail page. Extends style.css — tokens, .num, .pill, .bx, .turn all come from there.
+   Only what is new to this page lives here. */
+
+.tracepage { max-width: 1040px; padding-top: 34px; }
+
+.back { display: inline-block; font-size: 12px; color: var(--ink-3); }
+.back:hover { color: var(--accent); text-decoration: none; }
+
+.thead { margin-top: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.thead h1 { font-size: 25px; line-height: 1.22; letter-spacing: -0.028em; max-width: 30ch; }
+.thead .gold { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }
+.thead .gold b { color: var(--ink-2); font-weight: 500; }
+.thead .sid { font-size: 11px; color: var(--ink-4); margin-top: 8px; }
+
+/* ---- two policies, side by side ---------------------------------------- */
+
+.tpair { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 26px; }
+@media (max-width: 760px) { .tpair { grid-template-columns: 1fr; } }
+
+.tcol .head {
+  display: flex; align-items: center; gap: 9px;
+  padding-bottom: 9px; border-bottom: 2px solid var(--line);
+}
+.tcol.a .head { border-bottom-color: #a1a1ac; }
+.tcol.b .head { border-bottom-color: var(--accent); }
+.tcol .head .name { font-size: 14px; font-weight: 600; letter-spacing: -0.015em; }
+.tcol .head .spacer { flex: 1; }
+
+.tcol .shotwrap { margin-top: 13px; }
+.tcol .shotwrap img { max-height: 460px; width: 100%; object-fit: contain; }
+
+.tans { margin-top: 12px; }
+.tans .k { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); }
+.tans .v { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-top: 3px; }
+.tans .v i { font-style: italic; font-weight: 400; color: var(--ink-4); }
+
+.tstat { display: flex; gap: 20px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+.tstat div { font-size: 11px; color: var(--ink-4); }
+.tstat b { display: block; font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 2px; }
+
+/* ---- turn-by-turn ------------------------------------------------------- */
+
+.treel { margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); }
+.treel h2 { margin-bottom: 3px; }
+
+.tcol .turns { margin-top: 13px; }
+.tcol .turn { border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px 12px; margin-bottom: 10px; }
+.tcol .turn .tno { display: flex; align-items: baseline; gap: 7px; }
+.tcol .turn .tno .n { font-family: var(--mono); }
+.tcol.a .turn .tno { color: #a1a1ac; }
+.tcol.b .turn .tno { color: var(--accent); }
+.tcol .turn .tblk p { color: var(--ink-2); }
+.tcol .turn pre { background: #fafafc; }
+.tcol.b .turn pre { background: #f4f7ff; border-color: #dfe6ff; }
+.tcol .turn .fin { display: inline-block; margin-top: 3px; padding: 2px 7px; border-radius: 5px;
+  font-size: 13px; font-weight: 500; background: var(--good-weak); color: var(--good); }
+.tcol .turn .fin.bad { background: var(--bad-weak); color: var(--bad); }
+.cost { font-size: 11.5px; color: var(--ink-3); }
+.cost b { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 500; }
+
+.miss { margin-top: 30px; font-size: 13.5px; color: var(--ink-2); }

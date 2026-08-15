@@ -97,9 +97,11 @@ function headline() {
       `<div class="savekey"><span><i style="background:#2f5cff"></i>thinking ${Math.round(pc(dDec))}%</span>` +
       `<span><i style="background:#93a8ff"></i>looking ${Math.round(pc(dVis))}%</span>` +
       `<span><i style="background:#d6ddff"></i>tool calls ${Math.round(pc(dTool))}%</span></div>` +
-      `<div class="savenote">It learned to think less, not look less — a decode token costs ` +
+      `<div class="savenote">Almost all of that came from the model spending less time ` +
+      `<b>thinking</b>, not from cutting back on where it looked. A decode token costs ` +
       `<span class="num">${D.coeffs.b.toFixed(1)} ms</span> against ` +
-      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> for a vision token.</div>`;
+      `<span class="num">${D.coeffs.a.toFixed(2)} ms</span> for a vision token, so thinking is ` +
+      `where the milliseconds actually are.</div>`;
   }
 }
 
@@ -108,7 +110,8 @@ function hero() {
   const a = by.a, b = by.b;
   if (!a || !b) return;
   const items = [
-    [`${(a.latency_ms / b.latency_ms).toFixed(2)}×`, "faster on device", true],
+    ["same", "accuracy", false],
+    [`${(a.latency_ms / b.latency_ms).toFixed(2)}×`, "faster end to end", true],
     [`${Math.round((1 - b.usd_per_1k / a.usd_per_1k) * 100)}%`, "cheaper per question", true],
   ];
   $("#hero").innerHTML = items.map(([v, l, good]) =>
@@ -212,20 +215,20 @@ const CA = "#a1a1ac", CB = "#2f5cff";
 function charts() {
   const box = $("#charts"); box.innerHTML = "";
   const pick = (k, f) => (D.curves[k] || []).map((r) => [r.step, f(r)]);
-  box.appendChild(line("Mean reward", "reward = correct ? 1 − λ·cost_ms : 0 — this is the RL objective", [
+  box.appendChild(line("Mean reward", "what each run was actually optimising", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.reward) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.reward) },
   ], (v) => v.toFixed(2)));
-  box.appendChild(line("Zooms per question", "how much the policy looks", [
+  box.appendChild(line("Zooms per question", "how often it reaches for the tool", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.zooms) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.zooms) },
   ], (v) => v.toFixed(2)));
-  box.appendChild(line("Decode tokens", "how much the policy thinks", [
+  box.appendChild(line("Decode tokens", "how much it thinks before answering", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.decode) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.decode) },
   ], (v) => Math.round(v)));
-  box.appendChild(line("cost_ms — the term inside the reward",
-    "a·vision + b·decode + c·zooms, both runs priced on the frozen Q4 table", [
+  box.appendChild(line("cost_ms",
+    "both priced on the same table — no-cost never saw this term, so its line just drifts", [
     { name: "no cost", color: CA, pts: pick("a", (r) => r.cost_q4) },
     { name: "cost-aware", color: CB, pts: pick("b", (r) => r.cost_q4) },
   ], (v) => Math.round(v)));
@@ -233,25 +236,23 @@ function charts() {
   const ga = D.curves.a.reduce((s, r) => s + r.groups_used, 0), gat = D.curves.a.reduce((s, r) => s + r.groups_total, 0);
   const gb = D.curves.b.reduce((s, r) => s + r.groups_used, 0), gbt = D.curves.b.reduce((s, r) => s + r.groups_total, 0);
   $("#n-train").innerHTML =
-    `The cost-aware reward runs lower because it pays the cost term — read the behaviour curves, not the ` +
-    `height. A tied group of 8 teaches nothing, and a binary reward ties often: it learned from ` +
-    `<span class="num">${Math.round(gb / gbt * 100)}%</span> of its groups against no-cost's ` +
-    `<span class="num">${Math.round(ga / gat * 100)}%</span>.`;
+    `The cost-aware curve sits lower because it is paying the cost term — that is the point, ` +
+    `not a worse run. What matters is what the behaviour curves do underneath it.`;
 }
 
 /* ---------- 2×2 and samples -------------------------------------------- */
 
 const CELLS = [
-  ["both_right", "Both right"],
-  ["only_a", "Only no-cost"],
-  ["only_b", "Only cost-aware"],
-  ["both_wrong", "Both wrong"],
+  ["both_right", "Both right", "ok"],
+  ["only_a", "No cost", "a"],
+  ["only_b", "Cost-aware", "b"],
+  ["both_wrong", "Both wrong", "no"],
 ];
 
 function matrix() {
   const box = $("#cells"); box.innerHTML = "";
-  CELLS.forEach(([k, lab], i) => {
-    const b = el("button", "cell");
+  CELLS.forEach(([k, lab, tone], i) => {
+    const b = el("button", "cell c-" + tone);
     b.setAttribute("aria-pressed", i === 1 ? "true" : "false");
     b.innerHTML = `<div class="n num">${D.matrix[k]}</div><div class="t">${lab}</div>`;
     b.onclick = () => {
@@ -317,20 +318,11 @@ function showSamples(k) {
             </div>
             ${boxOverlay(s.sid, r.boxes, color)}
             <div class="val">${esc(r.answer) || "<i>no answer</i>"}</div>
-            <div class="meta num">${r.zooms} zoom${r.zooms === 1 ? "" : "s"} · ${r.decode} decode tok</div>
-            <button class="tbtn" data-k="${k}" data-i="${si}" data-w="${who}">show trace</button>
-            <div class="trace" hidden>${traceHtml(r.trace)}</div>
+            <a class="tbtn" style="display:inline-block" href="/trace.html?sid=${encodeURIComponent(s.sid)}">see the full trace &rarr;</a>
           </div>`;
         }).join("")}
       </div>`;
     box.appendChild(d);
-  });
-  box.querySelectorAll(".tbtn").forEach((b) => {
-    b.onclick = () => {
-      const t = b.nextElementSibling;
-      t.hidden = !t.hidden;
-      b.textContent = t.hidden ? "show trace" : "hide trace";
-    };
   });
 }
 
@@ -407,7 +399,7 @@ async function run() {
   fd.append("downproject", down ? "1" : "0");
 
   let statusNode = chatEl("sys", `<span class="spin"></span> loading ${quant.toUpperCase()} weights…`);
-  let turnNode = null, shown = null, tokBuf = "";
+  let turnNode = null, shown = null, tokBuf = "", pfRate = null;
 
   try {
     const res = await fetch("/api/stream", { method: "POST", body: fd });
@@ -433,12 +425,7 @@ async function run() {
   function handle(ev) {
     switch (ev.type) {
       case "status":
-        if (ev.stage === "ready") {
-          statusNode.className = "sys";
-          statusNode.innerHTML = ev.load_ms
-            ? `model ready <span class="num">${(ev.load_ms / 1000).toFixed(1)}s</span> to load`
-            : `model already warm`;
-        }
+        if (ev.stage === "ready") statusNode.remove();
         break;
       case "image":
         shown = chatEl("msg bot",
@@ -456,12 +443,13 @@ async function run() {
         if (turnNode) turnNode.querySelector(".stream").innerHTML = renderStream(tokBuf);
         break;
       case "prefill":
+        pfRate = ev.tok_per_s;
         if (turnNode) turnNode.insertAdjacentHTML("beforeend",
-          `<div class="tick num">prefill ${ev.tokens} tok · ${Math.round(ev.ms)} ms · ${ev.tok_per_s} tok/s</div>`);
+          `<div class="tick num">read ${ev.tokens} tok at ${ev.tok_per_s} tok/s</div>`);
         break;
       case "decode":
         if (turnNode) turnNode.insertAdjacentHTML("beforeend",
-          `<div class="tick num">decode ${ev.tokens} tok · ${Math.round(ev.ms)} ms · ${ev.tok_per_s} tok/s</div>`);
+          `<div class="tick num">wrote ${ev.tokens} tok at ${ev.tok_per_s} tok/s</div>`);
         break;
       case "turn_end":
         if (ev.kind === "tool_call" && ev.bbox_2d) {
@@ -485,10 +473,13 @@ async function run() {
         const s = (l, v) => `<div><b>${v}</b>${l}</div>`;
         chatEl("msg answer", `<div class="lbl">answer</div><div class="big">${esc(ev.answer) || "<i>no answer</i>"}</div>
           <div class="stat">
-            ${s("prefill tok", ev.prefill_tokens)}${s("decode tok", ev.decode_tokens)}
-            ${s("zooms", ev.zooms)}${s("total", Math.round(ev.total_ms) + " ms")}
-            ${s("decode", (ev.decode_tok_per_s ?? "—") + " tok/s")}
-            ${s("$ / 1k", "$" + (ev.usd * 1000).toFixed(3))}</div>`);
+            ${s("total", Math.round(ev.total_ms) + " ms")}
+            ${s("zooms", ev.zooms)}
+            ${s("prefill", ev.prefill_tokens + " tok")}
+            ${s("decode", ev.decode_tokens + " tok")}
+            ${s("read", (pfRate ?? "—") + " tok/s")}
+            ${s("wrote", (ev.decode_tok_per_s ?? "—") + " tok/s")}
+            ${s("cost / 1k", "$" + (ev.usd * 1000).toFixed(3))}</div>`);
         break;
       }
       case "error":

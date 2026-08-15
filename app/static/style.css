@@ -338,3 +338,34 @@ td.best { font-weight:600; color:var(--ink); }
 /* tighter: heading sits close to its content when there is no subtitle */
 h2 + .chips, h2 + .scroll, h2 + .charts, h2 + .cells { margin-top: 14px; }
 .chips { margin-bottom: 16px; }
+
+/* ---- reward formula ----------------------------------------------------- */
+.formula { margin:14px 0 18px; }
+.formula code { display:block; font-family:var(--mono); font-size:13px; color:var(--ink);
+  background:#fafafc; border:1px solid var(--line); border-radius:8px; padding:11px 13px;
+  margin-bottom:7px; overflow-x:auto; }
+.formula code.dim { color:var(--ink-3); font-size:12px; }
+.rwrap { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+@media (max-width:620px){ .rwrap{ grid-template-columns:1fr; } }
+.rcard { border:1px solid var(--line); border-radius:10px; padding:13px 15px; }
+.rcard.on { border-color:#dfe6ff; background:#f9fbff; }
+.rname { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-4);
+  margin-bottom:7px; }
+.rcard code { font-family:var(--mono); font-size:14px; color:var(--ink); font-weight:500; }
+.rcard.on code { color:var(--accent); }
+.rcard p { margin:8px 0 0; font-size:12.5px; line-height:1.5; color:var(--ink-3); }
+
+/* ---- column key --------------------------------------------------------- */
+.key { display:grid; grid-template-columns:1fr 1fr; gap:3px 22px; margin-top:13px; }
+@media (max-width:620px){ .key{ grid-template-columns:1fr; } }
+.key span { font-size:11.5px; color:var(--ink-3); line-height:1.5; }
+.key i { font-style:normal; font-family:var(--mono); color:var(--ink-2); margin-right:7px; }
+
+/* colour-coded example cells */
+.cell.c-ok  .n { color:var(--good); }
+.cell.c-a   .n { color:var(--ink-3); }
+.cell.c-b   .n { color:var(--accent); }
+.cell.c-no  .n { color:var(--bad); }
+.cell[aria-pressed="true"].c-a { border-color:var(--ink-3); background:#fafafb; }
+.cell[aria-pressed="true"].c-ok { border-color:var(--good); background:var(--good-weak); }
+.cell[aria-pressed="true"].c-no { border-color:var(--bad); background:var(--bad-weak); }
